@@ -1,0 +1,29 @@
+[submodule "BFF+AUTH/ms-auth"]
+	path = BFF+AUTH/ms-auth
+	url = https://github.com/parraSebastian91/ms-auth.git
+	branch = main
+
+[submodule "BUSSINES/ms-core"]
+	path = BUSSINES/ms-core
+	url = https://github.com/parraSebastian91/ms-core.git
+	branch = main
+
+[submodule "BUSSINES/ms-bodegaje"]
+	path = BUSSINES/ms-bodegaje
+	url = https://github.com/parraSebastian91/ms-bodegaje.git
+	branch = main
+
+[submodule "FRONTEND/app-login-erp-seis"]
+	path = FRONTEND/app-login-erp-seis
+	url = https://github.com/parraSebastian91/app-login-erp-seis.git
+	branch = main
+
+[submodule "FRONTEND/app-erp-seis"]
+	path = FRONTEND/app-erp-seis
+	url = https://github.com/parraSebastian91/app-erp-seis.git
+	branch = main
+
+[submodule "DB/db_seis_erp"]
+	path = DB/db_seis_erp
+	url = https://github.com/parraSebastian91/db_seis_erp.git
+	branch = main

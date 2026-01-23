@@ -1,0 +1,522 @@
+version: '3.8'
+
+services:
+  # ===========================================================================
+  # SERVICIOS EXISTENTES (PostgreSQL, Redis, Auth, Core, Kong, etc.)
+  # ===========================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: seis_erp_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:  ${DB_NAME:-core_erp}
+      POSTGRES_USER: ${DB_USER:-desarrollo}
+      POSTGRES_PASSWORD:  ${DB_PASSWORD:-desarrollo123}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes: 
+      - postgres_data:/var/lib/postgresql/data
+      - ./DB/db_seis_erp/init-db:/docker-entrypoint-initdb.d:ro
+    networks:
+      - erp_network
+    healthcheck:
+      test:  ["CMD-SHELL", "pg_isready -U ${DB_USER:-desarrollo} -d ${DB_NAME:-core_erp}"]
+      interval: 10s
+      timeout:  5s
+      retries:  5
+      start_period: 30s
+    labels:
+      - "prometheus.scrape=true"
+
+  redis:
+    image: redis:7-alpine
+    container_name:  seis_erp_redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - erp_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "prometheus.scrape=true"
+
+  auth-service:
+    build: 
+      context: ./BFF+AUTH/ms-auth
+      dockerfile: Dockerfile
+      target: development
+    container_name:  ms_auth_app
+    restart: unless-stopped
+    ports:
+      - "${AUTH_PORT:-3000}:3000"
+    env_file:
+      - ./BFF+AUTH/ms-auth/.env.dev
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      NODE_ENV: development
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_TOKEN:-myroot}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition:  service_healthy
+      vault:
+        condition: service_healthy
+    networks:
+      - erp_network
+    volumes:
+      - ./BFF+AUTH/ms-auth:/app
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=3000"
+      - "prometheus.path=/metrics"
+
+  ms_core: 
+    build:
+      context:  ./BUSSINES/ms-core
+      dockerfile: Dockerfile
+      target: development
+    container_name: ms_core
+    restart: unless-stopped
+    env_file:
+      - ./BUSSINES/ms-core/.env.dev
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      NODE_ENV: development
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_TOKEN:-myroot}
+    ports:
+      - "${CORE_PORT:-3001}:3001"
+    depends_on: 
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      vault:
+        condition: service_healthy
+    networks:
+      - erp_network
+    volumes: 
+      - ./BUSSINES/ms-core:/app
+      - /app/node_modules
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=3001"
+      - "prometheus. path=/metrics"
+
+  kong-db:
+    image: postgres:9.6-alpine
+    container_name: kong_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kong
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: ${KONG_DB_PASSWORD:-kong}
+    volumes:
+      - kong_postgres_data:/var/lib/postgresql/data
+    networks:
+      - erp_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong -d kong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  kong-migration:
+    image: kong:3.5.0
+    container_name: kong_migration
+    environment:
+      KONG_DATABASE:  postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_DATABASE: kong
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+    command: kong migrations bootstrap
+    depends_on:
+      kong-db:
+        condition: service_healthy
+    networks:
+      - erp_network
+    restart: on-failure
+
+  kong: 
+    image: kong:3.5.0
+    container_name: kong_gateway
+    restart: unless-stopped
+    environment:
+      KONG_DATABASE:  postgres
+      KONG_PG_HOST: kong-db
+      KONG_PG_DATABASE:  kong
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001, 0.0.0.0:8444 ssl
+      KONG_PROXY_LISTEN:  0.0.0.0:8000, 0.0.0.0:8443 ssl
+      KONG_NGINX_HTTP_RESOLVER: 8.8.8.8
+      KONG_PLUGINS: bundled
+    networks:
+      - erp_network
+    ports:
+      - "${KONG_PROXY_PORT:-8000}:8000"
+      - "${KONG_PROXY_SSL_PORT:-8443}:8443"
+      - "${KONG_ADMIN_PORT:-8001}:8001"
+      - "${KONG_ADMIN_SSL_PORT:-8444}:8444"
+    depends_on:
+      kong-db:
+        condition: service_healthy
+      kong-migration:
+        condition:  service_completed_successfully
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval:  30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=8001"
+      - "prometheus.path=/metrics"
+
+  konga-prepare:
+    image: pantsel/konga:0.14.9
+    container_name: konga_prepare
+    command: "-c prepare -a postgres -u postgresql://kong:${KONG_DB_PASSWORD:-kong}@kong-db:5432/konga"
+    networks:
+      - erp_network
+    depends_on:
+      kong-db:
+        condition:  service_healthy
+    restart: on-failure
+
+  konga: 
+    image: pantsel/konga:0.14.9
+    container_name: kong_admin_ui
+    restart: unless-stopped
+    environment: 
+      DB_ADAPTER: postgres
+      DB_URI: postgresql://kong:${KONG_DB_PASSWORD:-kong}@kong-db:5432/konga
+      NODE_ENV: production
+    ports:
+      - "${KONGA_PORT:-1337}:1337"
+    depends_on:
+      kong-db:
+        condition: service_healthy
+      konga-prepare:
+        condition: service_completed_successfully
+    networks:
+      - erp_network
+    profiles:
+      - admin-tools
+
+  app-login:
+    build: 
+      context: ./FRONTEND/app-login-erp-seis
+      dockerfile: Dockerfile
+    container_name: app_login
+    restart: unless-stopped
+    networks:
+      - erp_network
+    expose:
+      - "80"
+    environment:
+      - API_AUTH_URL=${APP_LOGIN_API_AUTH_URL:-/api/auth}
+      - API_CORE_URL=${APP_LOGIN_API_CORE_URL:-/api/core}
+      - API_BASE_URL=${APP_LOGIN_API_BASE_URL:-http://localhost:8000}
+      - ENVIRONMENT=${APP_LOGIN_ENVIRONMENT:-production}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      kong:
+        condition: service_healthy
+    labels:
+      - "prometheus. scrape=true"
+
+  # ===========================================================================
+  # 🔐 VAULT - Gestión de Secretos
+  # ===========================================================================
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: vault_server
+    restart: unless-stopped
+    ports:
+      - "${VAULT_PORT:-8200}:8200"
+    environment:
+      VAULT_ADDR: http://0.0.0.0:8200
+      VAULT_API_ADDR: http://0.0.0.0:8200
+      VAULT_DEV_ROOT_TOKEN_ID:  ${VAULT_TOKEN:-myroot}
+    cap_add:
+      - IPC_LOCK
+    volumes: 
+      - vault_data:/vault/data
+      - vault_logs:/vault/logs
+      #- ./vault/config:/vault/config:ro
+    command: server -dev -dev-listen-address=0.0.0.0:8200
+    networks:
+      - erp_network
+    healthcheck: 
+      test: ["CMD", "vault", "status"]
+      interval:  10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=8200"
+      - "prometheus. path=/v1/sys/metrics"
+
+  # ===========================================================================
+  # 📊 PROMETHEUS - Recolección de Métricas
+  # ===========================================================================
+  prometheus:
+    image: prom/prometheus:v2.48.0
+    container_name: prometheus
+    restart:  unless-stopped
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - erp_network
+    depends_on: 
+      - cadvisor
+      - node-exporter
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===========================================================================
+  # 📈 GRAFANA - Visualización de Métricas
+  # ===========================================================================
+  grafana:
+    image: grafana/grafana:10.2.2
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3030:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3030
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - erp_network
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ===========================================================================
+  # 🖥️ NODE EXPORTER - Métricas del Host
+  # ===========================================================================
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    container_name: node_exporter
+    restart:  unless-stopped
+    command: 
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - erp_network
+    ports:
+      - "9100:9100"
+
+  # ===========================================================================
+  # 🐳 CADVISOR - Métricas de Contenedores Docker
+  # ===========================================================================
+  cadvisor: 
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    container_name: cadvisor
+    restart: unless-stopped
+    privileged: true
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes: 
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - erp_network
+    ports:
+      - "8080:8080"
+
+  # ===========================================================================
+  # 🐘 POSTGRES EXPORTER - Métricas de PostgreSQL
+  # ===========================================================================
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:v0.15.0
+    container_name: postgres_exporter
+    restart: unless-stopped
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DB_USER:-desarrollo}: ${DB_PASSWORD:-desarrollo123}@postgres:5432/${DB_NAME:-core_erp}? sslmode=disable"
+    networks:
+      - erp_network
+    depends_on: 
+      postgres:
+        condition: service_healthy
+    ports:
+      - "9187:9187"
+
+  # ===========================================================================
+  # 📮 REDIS EXPORTER - Métricas de Redis
+  # ===========================================================================
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    container_name: redis_exporter
+    restart: unless-stopped
+    environment: 
+      REDIS_ADDR: redis:6379
+    networks: 
+      - erp_network
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "9121:9121"
+
+  # ===========================================================================
+  # 📝 LOKI - Agregación de Logs (OPCIONAL)
+  # ===========================================================================
+  loki:
+    image:  grafana/loki:2.9.3
+    container_name: loki
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    command:  -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki_data:/loki
+    networks:
+      - erp_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - monitoring-advanced
+
+  # ===========================================================================
+  # 📤 PROMTAIL - Recolector de Logs para Loki (OPCIONAL)
+  # ===========================================================================
+  promtail: 
+    image: grafana/promtail:2.9.3
+    container_name: promtail
+    restart: unless-stopped
+    volumes:
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - erp_network
+    depends_on:
+      - loki
+    profiles:
+      - monitoring-advanced
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: seis_erp_pgadmin
+    restart: unless-stopped
+    environment: 
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@erp.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin123}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "${PGADMIN_PORT:-5050}:80"
+    networks:
+      - erp_network
+    depends_on:
+      - postgres
+    profiles:
+      - admin-tools
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks: 
+  erp_network: 
+    driver: bridge
+    name: erp_network
+    external: true
+
+# =============================================================================
+# VOLUMES
+# =============================================================================
+volumes: 
+  postgres_data:
+    name: seis_erp_postgres_data
+  kong_postgres_data:
+    name: kong_postgres_data
+  redis_data:
+    name: seis_erp_redis_data
+  vault_data:
+    name: vault_data
+  vault_logs:
+    name: vault_logs
+  prometheus_data: 
+    name: prometheus_data
+  grafana_data:
+    name: grafana_data
+  loki_data:
+    name: loki_data
+  portainer_data:
+    name:  portainer_data

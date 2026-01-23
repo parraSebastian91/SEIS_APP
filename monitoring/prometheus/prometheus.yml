@@ -1,0 +1,118 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    cluster: 'erp-cluster'
+    environment: 'development'
+
+# Alertmanager configuration (opcional)
+# alerting:
+#   alertmanagers: 
+#     - static_configs: 
+#         - targets:  ['alertmanager:9093']
+
+# Reglas de alertas (crear después)
+# rule_files:
+#   - 'alerts/*. yml'
+
+scrape_configs:
+  # ===========================================================================
+  # Prometheus itself
+  # ===========================================================================
+  - job_name: 'prometheus'
+    static_configs: 
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # ===========================================================================
+  # Node Exporter (métricas del host)
+  # ===========================================================================
+  - job_name: 'node-exporter'
+    static_configs: 
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+
+  # ===========================================================================
+  # cAdvisor (métricas de Docker containers)
+  # ===========================================================================
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+
+  # ===========================================================================
+  # PostgreSQL Exporter
+  # ===========================================================================
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+        labels:
+          service: 'postgres'
+          database: 'core_erp'
+
+  # ===========================================================================
+  # Redis Exporter
+  # ===========================================================================
+  - job_name: 'redis'
+    static_configs: 
+      - targets: ['redis-exporter:9121']
+        labels:
+          service: 'redis'
+
+  # ===========================================================================
+  # Kong Gateway
+  # ===========================================================================
+  - job_name: 'kong'
+    static_configs:
+      - targets: ['kong: 8001']
+        labels:
+          service: 'kong'
+    metrics_path: '/metrics'
+
+  # ===========================================================================
+  # Vault
+  # ===========================================================================
+  - job_name: 'vault'
+    static_configs: 
+      - targets: ['vault:8200']
+        labels:
+          service: 'vault'
+    metrics_path: '/v1/sys/metrics'
+    params:
+      format: ['prometheus']
+    bearer_token: 'myroot'  # Usar tu VAULT_TOKEN
+
+  # ===========================================================================
+  # Auth Service (NestJS)
+  # ===========================================================================
+  - job_name: 'auth-service'
+    static_configs:
+      - targets:  ['auth-service:3000']
+        labels:
+          service:  'auth-service'
+          app: 'backend'
+    metrics_path: '/metrics'
+
+  # ===========================================================================
+  # Core Service (NestJS)
+  # ===========================================================================
+  - job_name: 'core-service'
+    static_configs: 
+      - targets: ['ms_core:3001']
+        labels:
+          service: 'core-service'
+          app: 'backend'
+    metrics_path: '/metrics'
+
+  # ===========================================================================
+  # App Login (Nginx)
+  # ===========================================================================
+  - job_name: 'app-login'
+    static_configs:
+      - targets: ['app-login:80']
+        labels:
+          service: 'app-login'
+          app:  'frontend'

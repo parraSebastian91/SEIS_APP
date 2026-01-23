@@ -1,0 +1,6 @@
+apiVersion:  1
+
+# Deshabilitar provisioning de dashboards por ahora
+# Los dashboards se pueden crear manualmente desde la UI
+
+providers:  []
