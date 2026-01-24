@@ -60,7 +60,7 @@ services:
     ports:
       - "${AUTH_PORT:-3000}:3000"
     env_file:
-      - ./BFF+AUTH/ms-auth/.env.dev
+      - ./BFF+AUTH/ms-auth/.env.container
     environment:
       DB_HOST: postgres
       REDIS_HOST: redis
