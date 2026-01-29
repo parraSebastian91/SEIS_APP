@@ -406,7 +406,7 @@ services:
     container_name: postgres_exporter
     restart: unless-stopped
     environment:
-      DATA_SOURCE_NAME: "postgresql://${DB_USER:-desarrollo}: ${DB_PASSWORD:-desarrollo123}@postgres:5432/${DB_NAME:-core_erp}? sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${DB_USER:-desarrollo}:${DB_PASSWORD:-desarrollo123}@postgres:5432/${DB_NAME:-core_erp}?sslmode=disable"
     networks:
       - erp_network
     depends_on: 
