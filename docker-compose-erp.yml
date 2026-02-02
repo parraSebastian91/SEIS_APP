@@ -187,10 +187,10 @@ services:
     networks:
       - erp_network
     ports:
-      - "${KONG_PROXY_PORT:-8000}:8000"
-      - "${KONG_PROXY_SSL_PORT:-8443}:8443"
-      - "${KONG_ADMIN_PORT:-8001}:8001"
-      - "${KONG_ADMIN_SSL_PORT:-8444}:8444"
+      - "0.0.0.0:${KONG_PROXY_PORT:-8000}:8000"
+      - "0.0.0.0:${KONG_ADMIN_PORT:-8001}:8001"
+      - "0.0.0.0:${KONG_PROXY_SSL_PORT:-8443}:8443"
+      - "0.0.0.0:${KONG_ADMIN_SSL_PORT:-8444}:8444"
     depends_on:
       kong-db:
         condition: service_healthy
@@ -247,7 +247,7 @@ services:
     networks:
       - erp_network
     ports:
-      - "8082:80"
+      - "0.0.0.0:8082:80"
     environment:
       - API_AUTH_URL=${APP_LOGIN_API_AUTH_URL:-/api/auth}
       - API_CORE_URL=${APP_LOGIN_API_CORE_URL:-/api/core}
@@ -274,7 +274,7 @@ services:
     networks:
       - erp_network
     ports:
-      - "8083:80"
+      - "0.0.0.0:8083:80"
     environment:
       - API_AUTH_URL=${APP_PORTAL_API_AUTH_URL:-/api/auth}
       - API_CORE_URL=${APP_PORTAL_API_CORE_URL:-/api/core}
