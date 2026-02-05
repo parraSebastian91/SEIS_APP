@@ -267,8 +267,8 @@ services:
 
   app-portal:
     build:
-      context: ./FRONTEND/app-erp-seis
-      dockerfile: dockerfile
+      context: ./FRONTEND/seis-app-frontend
+      dockerfile: dockerfile.portal
     container_name: app_portal
     restart: unless-stopped
     networks:
@@ -289,6 +289,27 @@ services:
     depends_on:
       kong:
         condition: service_healthy
+      mfe-gestion-usuario:
+        condition: service_healthy
+    labels:
+      - "prometheus.scrape=true"
+
+  mfe-gestion-usuario:
+    build:
+      context: ./FRONTEND/seis-app-frontend
+      dockerfile: dockerfile.mfe-gestion-usuario
+    container_name: app_mfe_gestion_usuario
+    restart: unless-stopped
+    networks:
+      - erp_network
+    ports:
+      - "0.0.0.0:8084:80"
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
     labels:
       - "prometheus.scrape=true"
 
