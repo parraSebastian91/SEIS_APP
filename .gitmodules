@@ -18,12 +18,23 @@
 	url = https://github.com/parraSebastian91/app-login-erp-seis.git
 	branch = main
 
-[submodule "FRONTEND/app-erp-seis"]
-	path = FRONTEND/app-erp-seis
-	url = https://github.com/parraSebastian91/app-erp-seis.git
-	branch = main
-
 [submodule "DB/db_seis_erp"]
 	path = DB/db_seis_erp
 	url = https://github.com/parraSebastian91/db_seis_erp.git
 	branch = main
+
+[submodule "FRONTEND/seis-app-frontend/projects/seis-mfe-gestion-usuario"]
+	path = FRONTEND/seis-app-frontend/projects/seis-mfe-gestion-usuario
+	url = https://github.com/parraSebastian91/seis-mfe-gestion-usuario.git
+	branch = main
+
+[submodule "FRONTEND/seis-app-frontend/projects/seis-portal"]
+	path = FRONTEND/seis-app-frontend/projects/seis-portal
+	url = https://github.com/parraSebastian91/seis-portal.git
+	branch = main
+
+[submodule "FRONTEND/seis-app-frontend"]
+	path = FRONTEND/seis-app-frontend
+	url = https://github.com/parraSebastian91/seis-app-frontend.git
+	branch = main
+
