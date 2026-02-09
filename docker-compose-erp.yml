@@ -289,12 +289,12 @@ services:
     depends_on:
       kong:
         condition: service_healthy
-      mfe-gestion-usuario:
-        condition: service_healthy
+      app-mfe-gestion-usuario:
+        condition: service_started
     labels:
       - "prometheus.scrape=true"
 
-  mfe-gestion-usuario:
+  app-mfe-gestion-usuario:
     build:
       context: ./FRONTEND/seis-app-frontend
       dockerfile: dockerfile.mfe-gestion-usuario
