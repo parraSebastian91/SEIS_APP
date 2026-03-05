@@ -38,3 +38,12 @@
 	url = https://github.com/parraSebastian91/seis-app-frontend.git
 	branch = main
 
+[submodule "BUSSINES/storage/ms-storage-orchestrator"]
+	path = BUSSINES/storage/ms-storage-orchestrator
+	url = https://github.com/parraSebastian91/ms-storage-orchestrator.git
+	branch = main
+
+[submodule "BUSSINES/storage/worker-storage-processor"]
+	path = BUSSINES/storage/worker-storage-processor
+	url = https://github.com/parraSebastian91/worker-storage-processor.git
+	branch = main

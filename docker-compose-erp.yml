@@ -54,7 +54,7 @@ services:
   # 🪣 MINIO - Emulador S3
   # ===========================================================================
   minio:
-    image: minio/minio:RELEASE.2024-10-29T20-35-49Z
+    image: minio/minio
     container_name: seis_erp_minio
     restart: unless-stopped
     command: server /data --console-address ":9001"
@@ -78,6 +78,7 @@ services:
   # ===========================================================================
   # 🐇 RABBITMQ - Mensajería
   # ===========================================================================
+
   rabbitmq:
     image: rabbitmq:3.12-management-alpine
     container_name: seis_erp_rabbitmq
