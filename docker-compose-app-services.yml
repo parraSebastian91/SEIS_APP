@@ -1,14 +1,10 @@
 version: '3.8'
 
-# =============================================================================
-# ERP CORE - Docker Compose Principal
-# =============================================================================
-
 services:
 
   auth-service:
     build:
-      context: ./BFF+AUTH/ms-auth
+      context: ./BACKEND/ms-auth
       dockerfile: Dockerfile
       target: development
     container_name: ms_auth_app
@@ -16,24 +12,17 @@ services:
     ports:
       - "${AUTH_PORT:-3000}:3000"
     env_file:
-      - ./BFF+AUTH/ms-auth/.env.container
+      - ./BACKEND/ms-auth/.env.container
     environment:
       DB_HOST: postgres
       REDIS_HOST: redis
       NODE_ENV: development
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN: ${VAULT_TOKEN:-myroot}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      vault:
-        condition: service_healthy
     networks:
       - erp_network
     volumes:
-      - ./BFF+AUTH/ms-auth:/app
+      - ./BACKEND/ms-auth:/app
       - /app/node_modules
     healthcheck:
       test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health" ]
@@ -46,15 +35,55 @@ services:
       - "prometheus.port=3000"
       - "prometheus.path=/metrics"
 
+  bff-seis-app:
+    build:
+      context: ./BACKEND/bff_seis_app
+      dockerfile: Dockerfile
+      target: development
+    container_name: bff_seis_app
+    restart: unless-stopped
+    env_file:
+      - ./BACKEND/bff_seis_app/.env.container
+    environment:
+      DB_HOST: postgres
+      REDIS_HOST: redis
+      NODE_ENV: development
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_TOKEN:-myroot}
+      AUTH_SERVICE_URL: http://ms_auth_app:3000
+      CORE_SERVICE_URL: http://ms_core:3001
+    ports:
+      - "${PORT:-3002}:3002"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      ms_core:
+        condition: service_healthy
+    networks:
+      - erp_network
+    volumes:
+      - ./BACKEND/bff_seis_app:/app
+      - /app/node_modules
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3002/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=3002"
+      - "prometheus.path=/metrics"
+
   ms_core:
     build:
-      context: ./BUSSINES/ms-core
+      context: ./BACKEND/ms-core
       dockerfile: Dockerfile
       target: development
     container_name: ms_core
     restart: unless-stopped
     env_file:
-      - ./BUSSINES/ms-core/.env.dev
+      - ./BACKEND/ms-core/.env.container
     environment:
       DB_HOST: postgres
       REDIS_HOST: redis
@@ -63,17 +92,10 @@ services:
       VAULT_TOKEN: ${VAULT_TOKEN:-myroot}
     ports:
       - "${CORE_PORT:-3001}:3001"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      vault:
-        condition: service_healthy
     networks:
       - erp_network
     volumes:
-      - ./BUSSINES/ms-core:/app
+      - ./BACKEND/ms-core:/app
       - /app/node_modules
     healthcheck:
       test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001/health" ]
@@ -84,7 +106,7 @@ services:
     labels:
       - "prometheus.scrape=true"
       - "prometheus.port=3001"
-      - "prometheus. path=/metrics"
+      - "prometheus.path=/metrics"
 
   app-login:
     build:
@@ -107,9 +129,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
-    depends_on:
-      kong:
-        condition: service_healthy
     labels:
       - "prometheus.scrape=true"
 
@@ -134,11 +153,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 15s
-    depends_on:
-      kong:
-        condition: service_healthy
-      app-mfe-gestion-usuario:
-        condition: service_started
     labels:
       - "prometheus.scrape=true"
 
@@ -167,6 +181,5 @@ services:
 networks:  
   erp_network:  
     driver: bridge
-    name:  erp_network
+    name: erp_network
     external: true
-
