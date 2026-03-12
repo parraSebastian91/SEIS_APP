@@ -1,0 +1,78 @@
+name: seis-frontend
+
+services:
+  app-login:
+    build:
+      context: ./FRONTEND/app-login-erp-seis
+      dockerfile: Dockerfile
+    container_name: app_login
+    restart: unless-stopped
+    networks:
+      - erp_network
+    ports:
+      - "0.0.0.0:8082:80"
+    environment:
+      - API_AUTH_URL=${APP_LOGIN_API_AUTH_URL:-/api/auth}
+      - API_CORE_URL=${APP_LOGIN_API_CORE_URL:-/api/core}
+      - API_BASE_URL=${APP_LOGIN_API_BASE_URL:-http://localhost:8000}
+      - ENVIRONMENT=${APP_LOGIN_ENVIRONMENT:-production}
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    labels:
+      - "prometheus.scrape=true"
+
+  app-portal:
+    build:
+      context: ./FRONTEND/seis-app-frontend
+      dockerfile: dockerfile.portal
+    container_name: app_portal
+    restart: unless-stopped
+    networks:
+      - erp_network
+    ports:
+      - "0.0.0.0:8083:80"
+    environment:
+      - API_AUTH_URL=${APP_PORTAL_API_AUTH_URL:-/api/auth}
+      - API_CORE_URL=${APP_PORTAL_API_CORE_URL:-/api/core}
+      - API_BASE_URL=${APP_PORTAL_API_BASE_URL:-http://localhost:8000}
+      - ENVIRONMENT=${APP_PORTAL_ENVIRONMENT:-production}
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    labels:
+      - "prometheus.scrape=true"
+
+  app-mfe-gestion-usuario:
+    build:
+      context: ./FRONTEND/seis-app-frontend
+      dockerfile: dockerfile.mfe-gestion-usuario
+    container_name: app_mfe_gestion_usuario
+    restart: unless-stopped
+    networks:
+      - erp_network
+    ports:
+      - "0.0.0.0:8084:80"
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    labels:
+      - "prometheus.scrape=true"
+
+# =============================================================================
+# NETWORKS
+# =============================================================================
+networks:  
+  erp_network:  
+    driver: bridge
+    name: erp_network
+    external: true
