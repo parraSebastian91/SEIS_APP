@@ -1,33 +1,3 @@
-[submodule "BACKEND/ms-auth"]
-	path = BACKEND/ms-auth
-	url = https://github.com/parraSebastian91/ms-auth.git
-	branch = main
-
-[submodule "BACKEND/ms-core"]
-	path = BACKEND/ms-core
-	url = https://github.com/parraSebastian91/ms-core.git
-	branch = main
-
-[submodule "BACKEND/ms-bodegaje"]
-	path = BACKEND/ms-bodegaje
-	url = https://github.com/parraSebastian91/ms-bodegaje.git
-	branch = main
-
-[submodule "BACKEND/storage/ms-storage-orchestrator"]
-	path = BACKEND/storage/ms-storage-orchestrator
-	url = https://github.com/parraSebastian91/ms-storage-orchestrator.git
-	branch = main
-
-[submodule "BACKEND/storage/worker-storage-processor"]
-	path = BACKEND/storage/worker-storage-processor
-	url = https://github.com/parraSebastian91/worker-storage-processor.git
-	branch = main
-
-[submodule "BACKEND/bff_seis_app"]
-	path = BACKEND/bff_seis_app
-	url = https://github.com/parraSebastian91/bff_seis_app.git
-	branch = main
-
 [submodule "FRONTEND/app-login-erp-seis"]
 	path = FRONTEND/app-login-erp-seis
 	url = https://github.com/parraSebastian91/app-login-erp-seis.git
@@ -51,4 +21,28 @@
 [submodule "FRONTEND/seis-app-frontend"]
 	path = FRONTEND/seis-app-frontend
 	url = https://github.com/parraSebastian91/seis-app-frontend.git
+	branch = main
+[submodule "BACKEND/ms-auth"]
+	path = BACKEND/ms-auth
+	url = https://github.com/parraSebastian91/ms-auth.git
+	branch = main
+[submodule "BACKEND/ms-core"]
+	path = BACKEND/ms-core
+	url = https://github.com/parraSebastian91/ms-core.git
+	branch = main
+[submodule "BACKEND/ms-bodegaje"]
+	path = BACKEND/ms-bodegaje
+	url = https://github.com/parraSebastian91/ms-bodegaje.git
+	branch = main
+[submodule "BACKEND/storage/ms-storage-orchestrator"]
+	path = BACKEND/storage/ms-storage-orchestrator
+	url = https://github.com/parraSebastian91/ms-storage-orchestrator.git
+	branch = main
+[submodule "BACKEND/storage/worker-storage-processor"]
+	path = BACKEND/storage/worker-storage-processor
+	url = https://github.com/parraSebastian91/worker-storage-processor.git
+	branch = main
+[submodule "BACKEND/bff_seis_app"]
+	path = BACKEND/bff_seis_app
+	url = https://github.com/parraSebastian91/bff_seis_app.git
 	branch = main
