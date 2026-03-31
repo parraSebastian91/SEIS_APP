@@ -54,11 +54,11 @@ services:
       CORE_SERVICE_URL: http://ms_core:3001
     ports:
       - "${PORT:-3002}:3002"
-    depends_on:
-      auth-service:
-        condition: service_healthy
-      ms_core:
-        condition: service_healthy
+    # depends_on:
+    #   auth-service:
+    #     condition: service_healthy
+      # ms_core:
+      #   condition: service_healthy
     networks:
       - erp_network
     volumes:
