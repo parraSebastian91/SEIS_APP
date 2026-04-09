@@ -108,6 +108,32 @@ services:
       - "prometheus.port=3001"
       - "prometheus.path=/metrics"
 
+  ms-storage-service:
+    build:
+      context: ./BACKEND/storage/ms-storage-orchestrator
+      dockerfile: Dockerfile
+      target: development
+    container_name: ms_storage_service
+    restart: unless-stopped
+    env_file:
+      - ./BACKEND/storage/ms-storage-orchestrator/.env.dev
+    ports:
+      - "${STORAGE_SERVICE_PORT:-3100}:3100"
+    networks:
+      - erp_network
+    volumes:
+      - ./BACKEND/storage/ms-storage-orchestrator:/app
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3100/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=3003"
+      - "prometheus.path=/metrics"
+
 # =============================================================================
 # NETWORKS
 # =============================================================================
