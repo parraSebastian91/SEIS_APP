@@ -54,9 +54,9 @@ services:
       CORE_SERVICE_URL: http://ms_core:3001
     ports:
       - "${PORT:-3002}:3002"
-    # depends_on:
-    #   auth-service:
-    #     condition: service_healthy
+      # depends_on:
+      #   auth-service:
+      #     condition: service_healthy
       # ms_core:
       #   condition: service_healthy
     networks:
@@ -131,14 +131,37 @@ services:
       start_period: 40s
     labels:
       - "prometheus.scrape=true"
-      - "prometheus.port=3003"
+      - "prometheus.port=3100"
       - "prometheus.path=/metrics"
 
+  worker-storage-processor:
+    build:
+      context: ./BACKEND/storage/worker-storage-processor
+      dockerfile: Dockerfile
+      target: runtime
+    container_name: worker_storage_processor
+    restart: unless-stopped
+    ports:
+      - "${STORAGE_WORKER_PORT:-3101}:3101"
+    env_file:
+      - ./BACKEND/storage/worker-storage-processor/.env
+    networks:
+      - erp_network
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3101/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=3101"
+      - "prometheus.path=/metrics"
 # =============================================================================
 # NETWORKS
 # =============================================================================
-networks:  
-  erp_network:  
+networks:
+  erp_network:
     driver: bridge
     name: erp_network
     external: true
