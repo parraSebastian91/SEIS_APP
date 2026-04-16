@@ -80,6 +80,33 @@ services:
       retries: 3
       start_period: 20s
 
+  # ---------------------------------------------------------------------------
+  # Init: configura CORS en MinIO para que el browser (Angular via Kong :8000)
+  # pueda descargar objetos sin ERR_BLOCKED_BY_ORB ni CORS errors.
+  # ---------------------------------------------------------------------------
+  minio-setup:
+    image: minio/mc:latest
+    container_name: minio_setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - erp_network
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-seis-app}
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
+        mc mb --ignore-existing local/$${MINIO_BUCKET};
+        mc anonymous set download local/$${MINIO_BUCKET};
+        mc admin config set local api cors_allow_origin='http://localhost:8000,http://localhost:4200,http://localhost:9000,*';
+        mc admin service restart local --yes || echo 'MinIO restart skipped (no TTY); reinicia el contenedor minio si es necesario.';
+        echo 'MinIO setup complete';
+      "
+    restart: on-failure
+
   # ===========================================================================
   # 🐇 RABBITMQ - Mensajería
   # ===========================================================================
