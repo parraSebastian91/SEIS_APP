@@ -158,6 +158,20 @@ add_cors_plugin "mfe-gestion-usuario"
 
 echo ""
 
+# MFE Dashboard de Facturas
+create_service "mfe-dashboard-facturas" "http://app_mfe_dashboard_facturas:80"
+create_route_no_strip "mfe-dashboard-facturas" "/mfe-dashboard-facturas" "mfe-dashboard-facturas-route"
+add_cors_plugin "mfe-dashboard-facturas"
+
+echo ""
+
+# MFE Publicador de Facturas
+create_service "mfe-publicador-facturas" "http://app_mfe_publicador_facturas:80"
+create_route_no_strip "mfe-publicador-facturas" "/mfe-publicador-facturas" "mfe-publicador-facturas-route"
+add_cors_plugin "mfe-publicador-facturas"
+
+echo ""
+
 # =============================================================================
 # VERIFICACIÓN
 # =============================================================================
@@ -179,5 +193,7 @@ echo "  - Portal:         http://localhost:8000/portal"
 echo "  - Auth API:       http://localhost:8000/api/auth"
 echo "  - Core API:       http://localhost:8000/api/core"
 echo "  - MFE Usuario:    http://localhost:8000/mfe-gestion-usuario"
+echo "  - MFE Dashboard:  http://localhost:8000/mfe-dashboard-facturas"
+echo "  - MFE Publicador: http://localhost:8000/mfe-publicador-facturas"
 echo ""
 echo "🎉 ¡Listo para usar!"
