@@ -139,6 +139,10 @@ services:
       context: ./BACKEND/storage/worker-storage-processor
       dockerfile: Dockerfile
       target: runtime
+      args:
+        ENABLE_OCR: "true"
+        CARGO_FEATURES: "--features ocr"
+        BUILD_PROFILE: "dev-fast"
     container_name: worker_storage_processor
     restart: unless-stopped
     ports:
