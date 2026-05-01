@@ -143,6 +143,7 @@ services:
         ENABLE_OCR: "true"
         CARGO_FEATURES: "--features ocr"
         BUILD_PROFILE: "dev-fast"
+        PDFIUM_VERSION: "7543"
     container_name: worker_storage_processor
     restart: unless-stopped
     ports:
