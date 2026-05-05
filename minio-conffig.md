@@ -37,8 +37,8 @@ La validacion comprueba:
 # mc alias set [alias] [url-servicio] [user-key] [secret-key]
 mc alias set mi-minio http://minio:9000 minioadmin minioadmin123
 
-# Ejemplo: Configurar un webhook llamado "mylisten"
-mc admin config set mi-minio notify_webhook:putEvent queue_dir=/tmp/events queue_limit=10000 endpoint=http://ms-storage-service:3100/webhoks/minio
+# Ejemplo: Configurar un webhook llamado "putEvent"
+mc admin config set mi-minio notify_webhook:putEvent queue_dir=/tmp/events queue_limit=10000 endpoint=http://ms-storage-service:3100/webhooks/minio
 
 # reiniciar servidor
 mc admin service restart mi-minio
@@ -46,3 +46,18 @@ mc admin service restart mi-minio
 # Habilitar notificaciones para el bucket "mi-bucket"
 mc event add mi-minio/seis-app-public-original arn:minio:sqs::putEvent:webhook --event put
 mc event add mi-minio/seis-app-private-original arn:minio:sqs::putEvent:webhook --event put
+
+# RRRemoverr run evento de un bucket
+mc event rm mi-minio/seis-app-public-original arn:minio:sqs::putEvent:webhook --event put
+mc event rm mi-minio/seis-app-private-original arn:minio:sqs::putEvent:webhook --event put
+
+# crear publico un bucket
+mc anonymous set public mi-minio/seis-app-public-original
+mc anonymous set public mi-minio/seis-app-public-processed
+
+## buckets crerados
+
+STORAGE_BUCKET_PUBLIC_ORIGINAL=seis-app-public-original
+STORAGE_BUCKET_PRIVATE_ORIGINAL=seis-app-private-original
+STORAGE_BUCKET_PUBLIC_PROCESSED=seis-app-public-processed
+STORAGE_BUCKET_PRIVATE_PROCESSED=seis-app-private-processed
