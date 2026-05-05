@@ -294,6 +294,17 @@ docker-compose -f docker-compose-erp.yml ps
 echo ""
 
 # ===========================================================================
+# 15. Validar MinIO + webhook (post-deploy)
+# ===========================================================================
+if [ -f "scripts/validate-minio-setup.sh" ]; then
+  echo -e "${CYAN}🪣 Validando MinIO y webhook...${NC}"
+  bash scripts/validate-minio-setup.sh || {
+    echo -e "${YELLOW}⚠ Validacion de MinIO con advertencias. Revisa logs y vuelve a ejecutar scripts/validate-minio-setup.sh${NC}"
+  }
+  echo ""
+fi
+
+# ===========================================================================
 # Resumen final
 # ===========================================================================
 echo -e "${BLUE}╔════════════════════════════════════════════════════════╗${NC}"

@@ -63,7 +63,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
       MINIO_NOTIFY_WEBHOOK_ENABLE_1: "on"
-      MINIO_NOTIFY_WEBHOOK_ENDPOINT_1: "http://ms-storage-service:3100/webhooks/minio"
+      MINIO_NOTIFY_WEBHOOK_ENDPOINT_1: ${MINIO_NOTIFY_WEBHOOK_ENDPOINT_1:-http://ms-storage-service:3100/webhooks/minio}
       # Opcional: un token para que Go valide que viene de MinIO
       # MINIO_NOTIFY_WEBHOOK_AUTH_TOKEN_1: "mi_super_secreto_123"   
     ports:
@@ -96,11 +96,14 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
       MINIO_BUCKET: ${MINIO_BUCKET:-seis-app}
+      MINIO_NOTIFY_TARGET_ARN: ${MINIO_NOTIFY_TARGET_ARN:-arn:minio:sqs::1:webhook}
     entrypoint: >
       /bin/sh -c "
+        set -e;
         mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
         mc mb --ignore-existing local/$${MINIO_BUCKET};
         mc anonymous set download local/$${MINIO_BUCKET};
+        mc event add --ignore-existing local/$${MINIO_BUCKET} $${MINIO_NOTIFY_TARGET_ARN} --event put --event post --event copy --event complete-multipart-upload;
         mc admin config set local api cors_allow_origin='http://localhost:8000,http://localhost:4200,http://localhost:9000,*';
         mc admin service restart local --yes || echo 'MinIO restart skipped (no TTY); reinicia el contenedor minio si es necesario.';
         echo 'MinIO setup complete';

@@ -1,4 +1,4 @@
-. PHONY: help up down restart logs build clean vault-init status health
+. PHONY: help up down restart logs build clean vault-init status health validate-minio
 
 # Variables
 COMPOSE_FILE = docker-compose-erp.yml
@@ -43,6 +43,10 @@ health: ## Health check de servicios
 	@echo "Prometheus:     $$(curl -s -o /dev/null -w '%{http_code}' http://localhost:9090/-/healthy 2>/dev/null)"
 	@echo "Grafana:        $$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3030/api/health 2>/dev/null)"
 	@echo ""
+
+validate-minio: ## Validar setup de MinIO + webhook operativo
+	@echo "$(BLUE)Validando MinIO y webhook...$(RESET)"
+	@bash scripts/validate-minio-setup.sh
 
 logs: ## Ver logs
 	docker-compose -f $(COMPOSE_FILE) logs -f
