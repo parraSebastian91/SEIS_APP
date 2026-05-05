@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-INFRA_COMPOSE_FILE="${INFRA_COMPOSE_FILE:-docker-compose-app-imfra.yml}"
+INFRA_COMPOSE_FILE="${INFRA_COMPOSE_FILE:-./../docker-compose-app-imfra.yml}"
 MINIO_INTERNAL_ENDPOINT="${MINIO_INTERNAL_ENDPOINT:-http://minio:9000}"
 MINIO_ROOT_USER="${MINIO_ROOT_USER:-minioadmin}"
 MINIO_ROOT_PASSWORD="${MINIO_ROOT_PASSWORD:-minioadmin123}"
@@ -27,14 +27,7 @@ run_mc() {
   compose -f "$INFRA_COMPOSE_FILE" run --rm --no-deps --entrypoint /bin/sh minio-setup -c "$1"
 }
 
-echo "[INFO] Validando salud de ms-storage-service en ${STORAGE_HEALTH_URL}"
-if command -v curl >/dev/null 2>&1; then
-  curl -fsS "$STORAGE_HEALTH_URL" >/dev/null
-elif command -v wget >/dev/null 2>&1; then
-  wget -q -O /dev/null "$STORAGE_HEALTH_URL"
-else
-  echo "[WARN] No se encontró curl ni wget en host; se omite healthcheck HTTP"
-fi
+
 
 echo "[INFO] Validando bucket y acceso publico en MinIO"
 run_mc "

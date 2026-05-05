@@ -31,3 +31,18 @@ La validacion comprueba:
 2. Existencia de bucket y politica publica.
 3. Regla de eventos hacia webhook.
 4. Carga real de archivo de prueba y recepcion en logs.
+
+
+# entrar con credenciales
+# mc alias set [alias] [url-servicio] [user-key] [secret-key]
+mc alias set mi-minio http://minio:9000 minioadmin minioadmin123
+
+# Ejemplo: Configurar un webhook llamado "mylisten"
+mc admin config set mi-minio notify_webhook:putEvent queue_dir=/tmp/events queue_limit=10000 endpoint=http://ms-storage-service:3100/webhoks/minio
+
+# reiniciar servidor
+mc admin service restart mi-minio
+
+# Habilitar notificaciones para el bucket "mi-bucket"
+mc event add mi-minio/seis-app-public-original arn:minio:sqs::putEvent:webhook --event put
+mc event add mi-minio/seis-app-private-original arn:minio:sqs::putEvent:webhook --event put
