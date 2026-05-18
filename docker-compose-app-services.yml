@@ -2,6 +2,7 @@ version: '3.8'
 name: seis-services
 services:
 
+
   auth-service:
     build:
       context: ./BACKEND/ms-auth
