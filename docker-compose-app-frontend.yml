@@ -106,6 +106,25 @@ services:
     labels:
       - "prometheus.scrape=true"      
 
+  app-mfe-ofertador-facturas:
+    build:
+      context: ./FRONTEND/seis-app-frontend
+      dockerfile: dockerfile.mfe-ofertador-facturas
+    container_name: app_mfe_ofertador_facturas
+    restart: unless-stopped
+    networks:
+      - erp_network
+    ports:
+      - "0.0.0.0:8087:80"
+    healthcheck:
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    labels:
+      - "prometheus.scrape=true" 
+
 # =============================================================================
 # NETWORKS
 # =============================================================================
