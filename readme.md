@@ -1,88 +1,316 @@
-# 🏢 ERP System - Full Stack con Microservicios
+# 🚀 SEIS App - ERP Financiero con Microservicios
 
-Sistema ERP empresarial completo construido con arquitectura de microservicios, incluyendo gestión de secretos con HashiCorp Vault y stack completo de monitoring con Prometheus y Grafana.
+**Sistema de Gestión de Facturas y Financiamiento** construido con arquitectura de microservicios NestJS, Angular Micro Frontends, PostgreSQL y análisis de dependencias con CodeGraph.
+
+📚 **Documentación Principal:**
+- [MONOREPO_ARCHITECTURE.md](MONOREPO_ARCHITECTURE.md) - Arquitectura completa, flujos de datos, dependencias críticas
+- [.github/copilot-instructions.md](.github/copilot-instructions.md) - Directrices para development con CodeGraph
+- [DB/db_seis_erp/README.md](DB/db_seis_erp/README.md) - Schema de base de datos
 
 ## 📋 Tabla de Contenidos
 
 - [Arquitectura](#-arquitectura)
 - [Tecnologías](#-tecnologías)
+- [Estructura del Monorepo](#-estructura-del-monorepo)
+- [Análisis de Dependencias con CodeGraph](#-análisis-de-dependencias-con-codegraph)
 - [Prerequisitos](#-prerequisitos)
 - [Instalación Rápida](#-instalación-rápida)
-- [Instalación Detallada](#-instalación-detallada)
 - [Verificación](#-verificación)
 - [URLs de Acceso](#-urls-de-acceso)
-- [Configuración de Vault](#-configuración-de-vault)
-- [Monitoring con Grafana](#-monitoring-con-grafana)
-- [Comandos Útiles](#-comandos-útiles)
-- [Troubleshooting](#-troubleshooting)
 - [Desarrollo](#-desarrollo)
-- [Backup y Restore](#-backup-y-restore)
-- [Limpieza](#-limpieza)
+- [Troubleshooting](#-troubleshooting)
 
 ---
 
 ## 🏗️ Arquitectura
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Cliente (Browser)                         │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────────────────────┐
-│              Kong API Gateway (:8000)                        │
-├─────────────────────────────────────────────────────────────┤
-│  /              →  app-login (Angular + Nginx)              │
-│  /api/auth      →  auth-service (NestJS :3000)              │
-│  /api/core      →  core-service (NestJS :3001)              │
-└──────────┬──────────────────────┬───────────────────────────┘
-           │                      │
-           ▼                      ▼
-┌──────────────────┐   ┌──────────────────┐
-│  PostgreSQL      │   │  Redis           │
-│  :5432           │   │  :6379           │
-└──────────────────┘   └──────────────────┘
-           │                      │
-           └──────────┬───────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│          Vault - Secrets Management (:8200)                  │
-└─────────────────────────────────────────────────────────────┘
+### Topología General
 
-┌─────────────────────────────────────────────────────────────┐
-│        Monitoring Stack (Prometheus + Grafana)               │
-│                                                              │
-│  Prometheus (:9090) ← Node Exporter (:9100)                 │
-│        ↓             ← Postgres Exporter (:9187)            │
-│  Grafana (:3030)     ← Redis Exporter (:9121)               │
-└─────────────────────────────────────────────────────────────┘
 ```
+┌────────────────────────────────────────────────────────────────────┐
+│                     FRONTEND (8082-8087)                           │
+│  app-login (8082) → seis-app (8083) → MFEs (8084-8087)            │
+└─────────┬──────────────────────────────────────────────────────────┘
+          │ HTTP Calls
+          ▼
+┌────────────────────────────────────────────────────────────────────┐
+│            BFF / API Gateway (3002)                                │
+│  (Backend for Frontend - Orquestación de servicios)                │
+└─────────┬─────────────────────────┬────────────────────────────────┘
+          │                         │
+          ▼                         ▼
+┌──────────────────────┐  ┌──────────────────────┐
+│   ms-auth (3000)     │  │   ms-core (3001)     │
+│  JWT / OAuth         │  │  Dominio (Facturas)  │
+└──────────┬───────────┘  └──────────┬───────────┘
+           │                         │
+           │                         │
+           └────────────┬────────────┘
+                        │
+                        ▼
+            ┌─────────────────────────┐
+            │  Infraestructura Shared │
+            ├─────────────────────────┤
+            │ • PostgreSQL (5432)     │
+            │ • Redis (6379)          │
+            │ • Vault (8200)          │
+            │ • MinIO (9000)          │
+            └─────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────┐
+│              Storage Services (Async)                               │
+│  ms-storage-orchestrator + worker-storage-processor                │
+│  (OCR, indexación de documentos, procesamiento de facturas)        │
+└────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────┐
+│         Monitoring (Prometheus + Grafana)                           │
+└────────────────────────────────────────────────────────────────────┘
+```
+
+### Servicios Backend
+
+| Servicio | Puerto | Propósito |
+|----------|--------|----------|
+| **ms-auth** | 3000 | Autenticación JWT, gestión de usuarios |
+| **ms-core** | 3001 | Dominio: facturas, usuarios, permisos, ofertas |
+| **bff_seis_app** | 3002 | API Gateway / Backend for Frontend |
+| **ms-storage-orchestrator** | Async | Orquestación de almacenamiento (MinIO) |
+| **worker-storage-processor** | Async | Procesamiento de documentos (OCR, indexación) |
+
+### Frontends (Micro Frontend Architecture)
+
+| App | Puerto | Tipo | Propósito |
+|-----|--------|------|----------|
+| **app-login-erp-seis** | 8082 | SPA | Autenticación y login |
+| **seis-app-frontend** (Portal) | 8083 | SPA | Portal principal |
+| **mfe-gestion-usuario** | 8084 | MFE | Gestión de usuarios |
+| **mfe-dashboard-facturas** | 8085 | MFE | Dashboard de facturas |
+| **mfe-publicador-facturas** | 8086 | MFE | Publicación de facturas |
+| **mfe-ofertador-facturas** | 8087 | MFE | Ofertas de financiamiento |
 
 ## 🛠️ Tecnologías
 
-### Backend
-- **NestJS** - Framework de Node.js para microservicios
+### Backend Microservicios
+- **NestJS 10** - Framework de Node.js para microservicios
+- **TypeScript** - Lenguaje tipado
 - **PostgreSQL 15** - Base de datos principal
-- **Redis 7** - Cache y sesiones
+- **Redis 7** - Cache, sesiones, job queue
 - **TypeORM** - ORM para TypeScript
 
 ### Frontend
-- **Angular 18** - Framework de frontend
-- **Nginx** - Servidor web para producción
+- **Angular 18** - Framework SPA
+- **Module Federation** - Micro Frontends
+- **RxJS** - Programación reactiva
+- **Bootstrap/Tailwind** - Estilos
 
-### Infrastructure
-- **Kong 3.5** - API Gateway
-- **Konga** - UI de administración para Kong
-- **HashiCorp Vault** - Gestión de secretos
+### Infraestructura
 - **Docker & Docker Compose** - Containerización
+- **HashiCorp Vault** - Gestión de secretos
+- **MinIO** - Object storage compatible S3
+- **Kong** - API Gateway (producción)
 
-### Monitoring
+### Monitoring & Observabilidad
 - **Prometheus** - Recolección de métricas
-- **Grafana** - Visualización de métricas
-- **Node Exporter** - Métricas del sistema
-- **PostgreSQL Exporter** - Métricas de base de datos
-- **Redis Exporter** - Métricas de cache
+- **Grafana** - Visualización
+- **Loki** - Agregación de logs
+- **Promtail** - Shipper de logs
+
+### Análisis de Código
+- **CodeGraph (@colbymchenry/codegraph)** - Indexación de dependencias del monorepo
+- **Graphify** - Visualización de grafo de código
+
+---
+
+## 📂 Estructura del Monorepo
+
+```
+SEIS_APP/
+├── .codegraph/                          # Índice consolidado (generado - .gitignore)
+├── .github/
+│   └── copilot-instructions.md         # Guía para desarrollo con AI
+├── MONOREPO_ARCHITECTURE.md             # Documentación de arquitectura
+├── README-comandos.md                   # Guía de comandos útiles
+│
+├── BACKEND/                             # 🔧 Microservicios NestJS
+│   ├── ms-auth/                         # 🔐 Autenticación JWT/OAuth
+│   │   ├── src/ (auth, guards, jwt)
+│   │   ├── config/
+│   │   ├── test/
+│   │   ├── Dockerfile
+│   │   ├── docker-compose.yml
+│   │   ├── package.json
+│   │   ├── README.md
+│   │   ├── GUARDS-GUIDE.md
+│   │   ├── JWT-DEBUG-GUIDE.md
+│   │   └── .codegraph/ (indexado ✅)
+│   │
+│   ├── ms-core/                         # 📋 Dominio principal
+│   │   ├── src/ (factura, usuario, permisos, ofertas)
+│   │   ├── config/
+│   │   ├── test/
+│   │   ├── Dockerfile
+│   │   ├── docker-compose.yml
+│   │   ├── package.json
+│   │   ├── README.md
+│   │   ├── GUARDS-GUIDE.md
+│   │   ├── DOCKER-GUIDE.md
+│   │   ├── DOCKER-SETUP-GUIDE.md
+│   │   └── .codegraph/ (indexado ✅)
+│   │
+│   ├── ms-bodegaje/                     # 📦 Gestión de almacén (Java/Spring)
+│   │   ├── src/
+│   │   ├── pom.xml
+│   │   ├── Dockerfile
+│   │   ├── docker-compose.yml
+│   │   ├── mvnw / mvnw.cmd
+│   │   └── ms-bodegaje.md
+│   │
+│   ├── bff_seis_app/                    # 🌉 Backend for Frontend (API Gateway)
+│   │   ├── src/ (auth, core, health)
+│   │   ├── configs/
+│   │   ├── test/
+│   │   ├── Dockerfile
+│   │   ├── package.json
+│   │   ├── README.md
+│   │   └── .codegraph/ (indexado ✅)
+│   │
+│   └── storage/                         # 💾 Gestión de archivos
+│       ├── ms-storage-orchestrator/     # Orquestación de MinIO
+│       └── worker-storage-processor/    # Procesamiento async (OCR, indexación)
+│
+├── DB/db_seis_erp/                      # 🗄️ Base de Datos PostgreSQL
+│   ├── init-db/
+│   │   ├── 01_init_core.sql            # Core: usuarios, organizaciones, contactos
+│   │   ├── 08_init_invoice.sql         # Dominio: facturas, ofertas, historial
+│   │   └── 09_init_permisos.sql        # ABAC: acceso genérico y roles
+│   ├── diagramas/                      # ER diagrams
+│   ├── redis/                          # Configuración de Redis
+│   ├── docker-compose.yml
+│   ├── docker-compose.dev.yml
+│   ├── pg_hba.conf
+│   ├── start.sh
+│   ├── test-connection.sh
+│   └── README.md
+│
+├── FRONTEND/                            # 🎨 Aplicaciones Angular
+│   ├── app-login-erp-seis/              # SPA de Login (puerto 8082)
+│   │   ├── src/
+│   │   │   ├── app/
+│   │   │   ├── assets/
+│   │   │   ├── environments/
+│   │   │   └── styles/
+│   │   ├── angular.json
+│   │   ├── package.json
+│   │   ├── Dockerfile
+│   │   ├── nginx.conf
+│   │   ├── proxy.conf.docker.json
+│   │   ├── docker-compose.yml
+│   │   └── README.md
+│   │
+│   ├── seis-app-frontend/               # Portal + Micro Frontends
+│   │   ├── projects/
+│   │   │   ├── portal/                 # Portal principal (8083)
+│   │   │   ├── mfe-gestion-usuario/    # MFE (8084)
+│   │   │   ├── mfe-dashboard-facturas/ # MFE (8085)
+│   │   │   ├── mfe-publicador-facturas/# MFE (8086)
+│   │   │   └── mfe-ofertador-facturas/ # MFE (8087)
+│   │   ├── angular.json
+│   │   ├── package.json
+│   │   ├── tsconfig.json
+│   │   └── README.md
+│   │
+│   ├── GUIA-NAVEGACION-MFE.md           # Arquitectura de Micro Frontends
+│   ├── README-MFE-ARQUITECTURA.md       # Documentación MFE
+│   └── readme.md
+│
+├── monitoring/                          # 📊 Observabilidad
+│   ├── prometheus/
+│   │   └── prometheus.yml
+│   ├── grafana/
+│   │   ├── dashboards/
+│   │   └── provisioning/
+│   ├── loki/
+│   │   └── loki-config.yml
+│   ├── promtail/
+│   │   └── promtail-config.yml
+│   └── monitoring.md
+│
+├── scripts/                             # 🛠️ Utilidades y automatización
+│   ├── deploy-full-stack.sh
+│   ├── cleanup.sh
+│   ├── force-cleanup.sh
+│   ├── init-vault.sh
+│   ├── backup-vault.sh
+│   ├── restore-vault.sh
+│   ├── kong-config.sh
+│   ├── setup-monitoring.sh
+│   ├── validate-minio-setup.sh
+│   └── monitoring/
+│
+├── vault/                               # 🔐 HashiCorp Vault Config
+│   ├── config/
+│   ├── policies/
+│   ├── respaldo/
+│   └── README.md
+│
+├── redis/                               # ⚡ Redis Config
+│   └── redis.conf/
+│
+├── docker-compose-app-services.yml     # 🐳 Backend services + BFF
+├── docker-compose-app-frontend.yml     # 🐳 Frontend applications
+├── docker-compose-app-imfra.yml        # 🐳 Infraestructura (postgres, redis, vault, minio)
+├── docker-clean-restart.sh             # Limpiar y reiniciar stack
+├── kong-konga-init.sh                  # Configuración de Kong (API Gateway)
+├── Makefile                             # 📝 Comandos comunes
+├── minio-config.md                      # Documentación de MinIO
+├── secrets-vault.json                   # Template de secretos (TEMPLATE)
+└── snapshot_3.json                      # Snapshot de configuración
+```
+
+---
+
+## 🔍 Análisis de Dependencias con CodeGraph
+
+SEIS App utiliza **CodeGraph** para mapear dependencias en el monorepo. Esto permite:
+
+✅ **Detectar impacto de cambios** - "¿Quién depende de esta función?"  
+✅ **Evitar ciclos** - Detectar dependencias circulares  
+✅ **Refactoring seguro** - Mover lógica sin romper nada  
+✅ **Documentación viva** - El grafo se actualiza automáticamente  
+
+### Estado de Indexación
+
+| Módulo | Estado | Estado Análisis |
+|--------|--------|-----------------|
+| ms-auth | ✅ Indexado | Servicios NestJS, Guards, JWT |
+| ms-core | ✅ Indexado | Dominio (Factura, Usuario, Permisos) |
+| bff_seis_app | ✅ Indexado | Orquestación de servicios |
+| ms-storage-orchestrator | ✅ Indexado | Orquestación de archivos |
+| worker-storage-processor | ✅ Indexado | Procesamiento async |
+| **Monorepo (raíz)** | ✅ Indexado | `.codegraph/codegraph.json` |
+
+### Comandos CodeGraph Frecuentes
+
+```bash
+# 🔍 Buscar un símbolo en todo el monorepo
+npx @colbymchenry/codegraph query "FacturaService" -j
+
+# 📊 Ver qué se afecta si cambias un archivo
+npx @colbymchenry/codegraph affected BACKEND/ms-auth/src/auth.service.ts
+
+# 📋 Listar archivos indexados
+npx @colbymchenry/codegraph files -j
+
+# 🌐 Abrir UI interactiva (RECOMENDADO)
+npx @colbymchenry/codegraph serve
+# → Abre http://localhost:3333
+
+# 📚 Ver contexto de un archivo
+npx @colbymchenry/codegraph context BACKEND/ms-core/src/factura/factura.service.ts
+```
+
+**Más en:** [.github/copilot-instructions.md](.github/copilot-instructions.md)
 
 ---
 
@@ -93,7 +321,7 @@ Sistema ERP empresarial completo construido con arquitectura de microservicios, 
 - **Docker** >= 20.10
 - **Docker Compose** >= 2.0
 - **Git**
-- **Bash** (Linux/Mac) o **Git Bash** (Windows)
+- **Node.js** >= 18 (para desarrollo local)
 - **Make** (opcional, pero recomendado)
 
 ### Recursos del Sistema
@@ -101,7 +329,7 @@ Sistema ERP empresarial completo construido con arquitectura de microservicios, 
 - **RAM**: 8GB mínimo, 16GB recomendado
 - **CPU**: 4 cores mínimo
 - **Disco**: 20GB espacio libre
-- **Puertos libres**: 3000, 3001, 3030, 5432, 6379, 8000, 8001, 8200, 9090, 9100, 9121, 9187
+- **Puertos libres**: 3000-3002 (backend), 5432 (postgres), 6379 (redis), 8082-8087 (frontends), 8200 (vault), 9000 (minio), 9090 (prometheus), 3030 (grafana)
 
 ### Verificar Prerequisitos
 
@@ -114,12 +342,16 @@ docker --version
 docker-compose --version
 # Docker Compose version 2.x.x o superior
 
-# Verificar que Docker está corriendo
-docker ps
+# Verificar Node.js (para desarrollo local)
+node --version
+# v18+ recomendado
 
 # Verificar puertos disponibles
-lsof -i :8000,8001,8200,3030,9090,5432,6379,3000,3001
-# No debería devolver nada
+# Linux/Mac
+lsof -i :3000,3001,3002,5432,6379,8082
+
+# Windows (PowerShell)
+netstat -ano | findstr "3000 3001 3002 5432 6379"
 ```
 
 ---
@@ -130,24 +362,71 @@ lsof -i :8000,8001,8200,3030,9090,5432,6379,3000,3001
 
 ```bash
 # 1. Clonar repositorio
-git clone <tu-repositorio>
-cd erp-system
+git clone https://github.com/tu-org/SEIS_APP.git
+cd SEIS_APP
 
-# 2. Levantar todo el stack
-make up
+# 2. Levantar infraestructura
+make dev-infra-up
 
-# 3. Esperar a que termine (5-10 minutos)
+# 3. Levantar servicios backend
+make dev-backend-up
 
-# 4. Verificar estado
+# 4. Levantar frontends
+make dev-frontend-up
+
+# 5. Verificar estado
 make status
-make health
 
-# 5. Ver URLs de acceso
+# 6. Ver URLs de acceso
 make urls
 ```
 
-### Opción 2: Con Scripts
+### Opción 2: Con Docker Compose Directo
 
+```bash
+# 1. Clonar y entrar
+git clone https://github.com/tu-org/SEIS_APP.git
+cd SEIS_APP
+
+# 2. Levantar infraestructura (postgres, redis, vault, minio)
+docker-compose -f docker-compose-app-imfra.yml up -d
+
+# 3. Esperar 30 segundos a que estabilice
+sleep 30
+
+# 4. Levantar servicios backend
+docker-compose -f docker-compose-app-services.yml up -d
+
+# 5. Levantar frontends
+docker-compose -f docker-compose-app-frontend.yml up -d
+
+# 6. Verificar
+docker-compose -f docker-compose-app-services.yml ps
+```
+
+### Opción 3: Desarrollo Local (sin Docker)
+
+```bash
+# Backend - ms-auth
+cd BACKEND/ms-auth
+npm install
+npm run start:dev
+
+# En otra terminal - ms-core
+cd BACKEND/ms-core
+npm install
+npm run start:dev
+
+# En otra terminal - BFF
+cd BACKEND/bff_seis_app
+npm install
+npm run start:dev
+
+# En otra terminal - Frontend
+cd FRONTEND/app-login-erp-seis
+npm install
+npm start
+```
 ```bash
 # 1. Clonar repositorio
 git clone <tu-repositorio>
@@ -165,505 +444,141 @@ bash scripts/verify-all.sh
 
 ---
 
-## 📖 Instalación Detallada
-
-### Paso 1: Preparación del Entorno
-
-```bash
-# Clonar repositorio
-git clone <tu-repositorio>
-cd erp-system
-
-# Crear archivo .env (opcional, usa valores por defecto)
-cp .env.example .env
-
-# Editar configuración si es necesario
-nano .env
-```
-
-### Paso 2: Crear Red de Docker
-
-```bash
-# Crear red compartida
-docker network create erp_network
-
-# Verificar
-docker network ls | grep erp_network
-```
-
-### Paso 3: Crear Estructura de Directorios
-
-```bash
-# Crear directorios necesarios
-mkdir -p monitoring/prometheus
-mkdir -p monitoring/grafana/provisioning/datasources
-mkdir -p monitoring/grafana/provisioning/dashboards
-mkdir -p monitoring/grafana/provisioning/plugins
-mkdir -p monitoring/grafana/provisioning/notifiers
-mkdir -p monitoring/grafana/provisioning/alerting
-mkdir -p monitoring/grafana/dashboards
-mkdir -p vault/config
-mkdir -p vault/policies
-mkdir -p scripts
-mkdir -p backups/vault
-mkdir -p backups/database
-```
-
-### Paso 4: Levantar Servicios Base
-
-```bash
-# PostgreSQL y Redis
-docker-compose -f docker-compose-erp.yml up -d postgres redis
-
-# Esperar a que estén saludables (~15 segundos)
-docker-compose -f docker-compose-erp.yml ps
-
-# Verificar logs
-docker-compose -f docker-compose-erp.yml logs postgres redis
-```
-
-### Paso 5: Levantar y Configurar Vault
-
-```bash
-# Levantar Vault
-docker-compose -f docker-compose-erp.yml up -d vault
-
-# Esperar 10 segundos
-sleep 10
-
-# Inicializar Vault con secretos
-bash scripts/init-vault.sh
-
-# Verificar
-curl http://localhost:8200/v1/sys/health
-```
-
-**📝 Nota**: El script `init-vault.sh` creará:
-- Secretos para todos los servicios
-- Políticas de acceso
-- Tokens por servicio
-- Archivo `.vault-tokens` con los tokens generados
-
-### Paso 6: Levantar Servicios de Aplicación
-
-```bash
-# Auth y Core services
-docker-compose -f docker-compose-erp.yml up -d auth-service ms_core
-
-# Verificar logs
-docker-compose -f docker-compose-erp.yml logs -f auth-service ms_core
-```
-
-### Paso 7: Levantar Kong API Gateway
-
-```bash
-# Kong y sus dependencias
-docker-compose -f docker-compose-erp.yml up -d kong-db kong-migration kong
-
-# Esperar 15 segundos
-sleep 15
-
-# Configurar Kong
-bash setup-kong-frontend.sh
-
-# Verificar
-curl http://localhost:8001/
-```
-
-### Paso 8: Levantar Frontend
-
-```bash
-# App Angular
-docker-compose -f docker-compose-erp.yml up -d --build app-login
-
-# Verificar
-curl -I http://localhost:8000/
-```
-
-### Paso 9: Levantar Stack de Monitoring
-
-```bash
-# Exporters
-docker-compose -f docker-compose-erp.yml up -d \
-  node-exporter \
-  postgres-exporter \
-  redis-exporter
-
-# Prometheus
-docker-compose -f docker-compose-erp.yml up -d prometheus
-
-# Grafana
-docker-compose -f docker-compose-erp.yml up -d grafana
-
-# Verificar
-curl http://localhost:9090/-/healthy
-curl http://localhost:3030/api/health
-```
-
-### Paso 10: Herramientas de Administración (Opcional)
-
-```bash
-# Konga, PgAdmin, Portainer
-docker-compose -f docker-compose-erp.yml --profile admin-tools up -d
-
-# Acceder a:
-# - Konga: http://localhost:1337
-# - PgAdmin: http://localhost:5050
-# - Portainer: http://localhost:9000
-```
-
----
-
 ## ✅ Verificación
 
-### Script de Verificación Automática
+### Verificar Servicios Backend
 
 ```bash
-# Verificar todos los servicios
-bash scripts/verify-all.sh
+# Ver status de todos los contenedores
+docker-compose -f docker-compose-app-services.yml ps
+docker-compose -f docker-compose-app-imfra.yml ps
+
+# Health check de ms-auth
+curl http://localhost:3000/health
+
+# Health check de ms-core
+curl http://localhost:3001/health
+
+# Health check de BFF
+curl http://localhost:3002/health
+
+# Verificar PostgreSQL
+docker-compose -f docker-compose-app-imfra.yml exec postgres pg_isready -U postgres
+
+# Verificar Redis
+docker-compose -f docker-compose-app-imfra.yml exec redis redis-cli ping
 ```
 
-### Verificación Manual
+### Verificar Frontends
 
 ```bash
-# Ver estado de contenedores
-docker-compose -f docker-compose-erp.yml ps
+# app-login
+curl http://localhost:8082/
 
-# Deberías ver todos como "Up" y con (healthy) los que tienen healthcheck
+# seis-app-frontend (portal)
+curl http://localhost:8083/
 
-# Verificar logs
-docker-compose -f docker-compose-erp.yml logs --tail=50
-
-# Probar endpoints
-curl http://localhost:8000/                    # Frontend (200)
-curl http://localhost:8200/v1/sys/health       # Vault (200)
-curl http://localhost:3030/api/health          # Grafana (200)
-curl http://localhost:9090/-/healthy           # Prometheus (200)
-curl http://localhost:3000/health              # Auth Service (200)
-curl http://localhost:3001/health              # Core Service (200)
-curl http://localhost:8001/                    # Kong Admin (200)
-```
-
-### Verificar Health Checks
-
-```bash
-# Ver solo contenedores saludables
-docker ps --filter "health=healthy"
-
-# Debería mostrar:
-# - postgres
-# - redis
-# - vault_server
-# - kong_gateway
-# - ms_auth_app
-# - ms_core
-# - grafana
-# - prometheus
+# MFEs
+curl http://localhost:8084/ # gestion-usuario
+curl http://localhost:8085/ # dashboard-facturas
 ```
 
 ---
 
-## 🌐 URLs de Acceso
+## 📍 URLs de Acceso
 
-### Aplicación Principal
-
-| Servicio | URL | Credenciales |
-|----------|-----|--------------|
-| **Frontend** | http://localhost:8000 | - |
-| **API (via Kong)** | http://localhost:8000/api/* | - |
-
-### Seguridad
+### Aplicaciones
 
 | Servicio | URL | Credenciales |
 |----------|-----|--------------|
-| **Vault UI** | http://localhost:8200/ui | Token: `myroot` |
+| **Login** | http://localhost:8082 | User/Pass (ver .env) |
+| **Portal SEIS** | http://localhost:8083 | Mismo usuario |
+| **Gestión Usuario** | http://localhost:8084 | MFE integrado |
+| **Dashboard Facturas** | http://localhost:8085 | MFE integrado |
+| **Publicador Facturas** | http://localhost:8086 | MFE integrado |
+| **Ofertador Facturas** | http://localhost:8087 | MFE integrado |
 
-### Monitoring
+### APIs Backend
+
+| Servicio | URL | Docs |
+|----------|-----|------|
+| **ms-auth** | http://localhost:3000 | /api/docs |
+| **ms-core** | http://localhost:3001 | /api/docs |
+| **BFF** | http://localhost:3002 | /api/docs |
+
+### Infraestructura
 
 | Servicio | URL | Credenciales |
 |----------|-----|--------------|
-| **Grafana** | http://localhost:3030 | admin / admin123 |
-| **Prometheus** | http://localhost:9090 | - |
-
-### API Gateway
-
-| Servicio | URL | Credenciales |
-|----------|-----|--------------|
-| **Kong Admin** | http://localhost:8001 | - |
-| **Konga UI** | http://localhost:1337 | (Configurar en primer acceso) |
-
-### Herramientas de Admin
-
-| Servicio | URL | Credenciales |
-|----------|-----|--------------|
-| **PgAdmin** | http://localhost:5050 | admin@erp.local / admin123 |
-| **Portainer** | http://localhost:9000 | (Configurar en primer acceso) |
-
-### Servicios Directos (Solo para desarrollo)
-
-| Servicio | URL | Descripción |
-|----------|-----|-------------|
-| **Auth Service** | http://localhost:3000/health | Health check |
-| **Core Service** | http://localhost:3001/health | Health check |
-| **Node Exporter** | http://localhost:9100/metrics | Métricas del sistema |
-| **Postgres Exporter** | http://localhost:9187/metrics | Métricas de PostgreSQL |
-| **Redis Exporter** | http://localhost:9121/metrics | Métricas de Redis |
+| **Prometheus** | http://localhost:9090 | N/A |
+| **Grafana** | http://localhost:3030 | admin/admin (cambiar) |
+| **Vault** | http://localhost:8200 | Token en .vault-tokens |
+| **MinIO** | http://localhost:9000 | minioadmin/minioadmin |
+| **PostgreSQL** | localhost:5432 | postgres/password |
+| **Redis** | localhost:6379 | N/A |
 
 ---
 
-## 🔐 Configuración de Vault
+## 🧪 Desarrollo
 
-### Acceder a Vault UI
-
-```bash
-# Abrir en navegador
-open http://localhost:8200/ui
-
-# Token de acceso (desarrollo)
-Token: myroot
-```
-
-### Ver Secretos Configurados
+### Reindexar CodeGraph después de cambios
 
 ```bash
-# Listar todos los secretos
-docker exec vault_server vault kv list secret/
+# Desde la raíz del monorepo
+npx @colbymchenry/codegraph init -i
 
-# Ver secreto específico
-docker exec vault_server vault kv get secret/database
-docker exec vault_server vault kv get secret/auth-service
+# O en un proyecto específico
+cd BACKEND/ms-core
+npx @colbymchenry/codegraph init -i
 ```
 
-### Tokens de Servicios
-
-Los tokens generados están en `.vault-tokens`:
+### Ver UI Interactiva del Grafo
 
 ```bash
-# Ver tokens
-cat .vault-tokens
-
-# Contenido ejemplo:
-# VAULT_ROOT_TOKEN=myroot
-# AUTH_SERVICE_VAULT_TOKEN=hvs.CAESIxxx...
-# CORE_SERVICE_VAULT_TOKEN=hvs.CAESIyyy...
+npx @colbymchenry/codegraph serve
+# Abre http://localhost:3333
 ```
 
-### Crear Nuevo Secreto
+### Buscar Impacto de Cambios
 
 ```bash
-# Desde CLI
-docker exec vault_server vault kv put secret/mi-servicio \
-  api_key=mi-clave-secreta \
-  password=mi-password
+# ¿Quién llama a esta función?
+npx @colbymchenry/codegraph query "nombreFuncion" -j
 
-# Desde API
-curl -X POST http://localhost:8200/v1/secret/data/mi-servicio \
-  -H "X-Vault-Token: myroot" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "data": {
-      "api_key": "mi-clave-secreta",
-      "password": "mi-password"
-    }
-  }'
+# ¿Qué se afecta si cambio este archivo?
+npx @colbymchenry/codegraph affected BACKEND/ms-core/src/factura/factura.service.ts
+
+# ¿Qué archivos tienen esta clase?
+npx @colbymchenry/codegraph query "FacturaService" -k class
 ```
 
-### Backup de Vault
+### Testing
 
 ```bash
-# Crear backup
-bash scripts/backup-vault.sh
+# Backend - ms-auth
+cd BACKEND/ms-auth
+npm run test
 
-# Los backups se guardan en: backups/vault/
-# Formato: vault_backup_YYYYMMDD_HHMMSS.json.gz
+# Backend - ms-core
+cd BACKEND/ms-core
+npm run test
+
+# Frontend
+cd FRONTEND/app-login-erp-seis
+npm run test
 ```
 
-### Restore de Vault
+### Logs en Desarrollo
 
 ```bash
-# Restaurar desde backup
-bash scripts/restore-vault.sh
+# Ver logs de todos los servicios
+docker-compose -f docker-compose-app-services.yml logs -f
 
-# Te mostrará una lista de backups disponibles
-# Selecciona el número correspondiente
-```
+# Ver logs de un servicio específico
+docker-compose -f docker-compose-app-services.yml logs -f ms_core
 
----
-
-## 📊 Monitoring con Grafana
-
-### Acceder a Grafana
-
-```bash
-# Abrir en navegador
-open http://localhost:3030
-
-# Credenciales
-Usuario: admin
-Password: admin123
-```
-
-### Verificar Datasource
-
-1. Ve a **Configuration** (⚙️) → **Data Sources**
-2. Deberías ver **Prometheus** configurado
-3. Click en **Prometheus** → **Save & Test**
-4. Debería mostrar: ✅ "Data source is working"
-
-### Importar Dashboards Pre-configurados
-
-En Grafana, ve a **+ → Import** y usa estos IDs:
-
-```bash
-# Dashboard de Node Exporter (métricas del sistema)
-ID: 1860
-Nombre: Node Exporter Full
-
-# Dashboard de PostgreSQL
-ID: 9628
-Nombre: PostgreSQL Database
-
-# Dashboard de Redis
-ID: 11835
-Nombre: Redis Dashboard
-
-# Dashboard de Docker
-ID: 893
-Nombre: Docker and System Monitoring
-
-# Dashboard de Kong
-ID: 7424
-Nombre: Kong Official Dashboard
-```
-
-### Crear Dashboard Personalizado
-
-1. Click en **+ → Dashboard**
-2. **Add panel**
-3. En la query de Prometheus:
-
-```promql
-# CPU usage
-100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
-
-# Memoria usada
-(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
-
-# Requests en Kong
-rate(kong_http_requests_total[5m])
-
-# Conexiones a PostgreSQL
-pg_stat_database_numbackends{datname="core_erp"}
-
-# Comandos en Redis
-rate(redis_commands_processed_total[1m])
-```
-
-### Queries Útiles de Prometheus
-
-```promql
-# Ver todos los servicios activos
-up
-
-# CPU por contenedor
-rate(container_cpu_usage_seconds_total[5m])
-
-# Memoria por contenedor
-container_memory_usage_bytes
-
-# Disco disponible
-node_filesystem_avail_bytes
-
-# Latencia de Kong
-histogram_quantile(0.95, kong_latency_bucket)
-```
-
----
-
-## 🔧 Comandos Útiles
-
-### Con Make
-
-```bash
-make help              # Ver todos los comandos disponibles
-make up                # Levantar todo el stack
-make down              # Detener todo
-make restart           # Reiniciar servicios
-make status            # Ver estado de servicios
-make health            # Health check de todos los servicios
-make logs              # Ver logs en tiempo real
-make logs-app          # Logs solo de aplicación
-make logs-vault        # Logs de Vault
-make logs-monitoring   # Logs de monitoring
-make build             # Construir imágenes
-make rebuild           # Reconstruir sin cache
-make vault-init        # Inicializar Vault
-make vault-ui          # Abrir Vault UI
-make grafana           # Abrir Grafana
-make prometheus        # Abrir Prometheus
-make backup-vault      # Backup de Vault
-make restore-vault     # Restore de Vault
-make db-shell          # Conectar a PostgreSQL
-make db-backup         # Backup de PostgreSQL
-make redis-cli         # Conectar a Redis CLI
-make clean             # Limpiar todo (¡cuidado!)
-make urls              # Mostrar todas las URLs
-```
-
-### Docker Compose Manual
-
-```bash
-# Levantar servicios
-docker-compose -f docker-compose-erp.yml up -d
-
-# Levantar servicios específicos
-docker-compose -f docker-compose-erp.yml up -d postgres redis vault
-
-# Detener servicios
-docker-compose -f docker-compose-erp.yml down
-
-# Ver logs
-docker-compose -f docker-compose-erp.yml logs -f
-
-# Ver logs de un servicio
-docker-compose -f docker-compose-erp.yml logs -f auth-service
-
-# Ver estado
-docker-compose -f docker-compose-erp.yml ps
-
-# Reiniciar servicio
-docker-compose -f docker-compose-erp.yml restart auth-service
-
-# Reconstruir imagen
-docker-compose -f docker-compose-erp.yml build auth-service
-
-# Detener y eliminar volúmenes (¡cuidado!)
-docker-compose -f docker-compose-erp.yml down -v
-```
-
-### Docker Directo
-
-```bash
-# Ver todos los contenedores
-docker ps
-
-# Ver logs de un contenedor
-docker logs -f vault_server
-docker logs --tail 100 grafana
-
-# Ejecutar comando en contenedor
-docker exec -it seis_erp_postgres psql -U desarrollo -d core_erp
-docker exec -it seis_erp_redis redis-cli
-docker exec -it vault_server sh
-
-# Ver uso de recursos
-docker stats
-
-# Inspeccionar red
-docker network inspect erp_network
-
-# Ver volúmenes
-docker volume ls
+# Ver logs de infraestructura
+docker-compose -f docker-compose-app-imfra.yml logs -f postgres
 ```
 
 ---
@@ -673,112 +588,79 @@ docker volume ls
 ### Puerto Ya en Uso
 
 ```bash
-# Ver qué está usando el puerto
-lsof -i :8200
+# Encontrar qué proceso ocupa el puerto
+# Linux/Mac
+lsof -i :3000
 
-# Matar proceso
-kill -9 <PID>
-
-# O usar sudo
-sudo kill -9 <PID>
-```
-
-### Servicio No Inicia
-
-```bash
-# Ver logs del servicio
-docker logs <nombre-contenedor>
-
-# Ejemplos:
-docker logs vault_server
-docker logs grafana
-docker logs kong_gateway
-
-# Reiniciar servicio
-docker restart <nombre-contenedor>
-```
-
-### Error "Address Already in Use"
-
-```bash
-# Limpiar contenedores anteriores
-docker-compose -f docker-compose-erp.yml down
-
-# Eliminar contenedores huérfanos
-docker ps -a | grep -E "vault|kong|grafana" | awk '{print $1}' | xargs docker rm -f
-
-# Limpiar volúmenes
-docker volume prune -f
-
-# Intentar nuevamente
-bash scripts/deploy-full-stack.sh
-```
-
-### Vault No Se Conecta
-
-```bash
-# Verificar que Vault esté corriendo
-docker ps | grep vault
-
-# Ver logs
-docker logs vault_server
-
-# Verificar salud
-curl http://localhost:8200/v1/sys/health
-
-# Reiniciar Vault
-docker restart vault_server
-
-# Reinicializar
-bash scripts/init-vault.sh
-```
-
-### Grafana No Muestra Datos
-
-```bash
-# Verificar que Prometheus esté corriendo
-curl http://localhost:9090/-/healthy
-
-# Verificar datasource en Grafana
-curl -u admin:admin123 http://localhost:3030/api/datasources
-
-# Ver logs de Grafana
-docker logs grafana | grep -i "datasource\|prometheus"
-
-# Reiniciar Grafana
-docker restart grafana
-```
-
-### Kong Devuelve 502
-
-```bash
-# Verificar que los servicios backend estén up
-docker ps | grep -E "auth-service|ms_core|app-login"
-
-# Ver configuración de Kong
-curl http://localhost:8001/services
-curl http://localhost:8001/routes
-
-# Reconfigurar Kong
-bash setup-kong-frontend.sh
-
-# Ver logs
-docker logs kong_gateway
+# Windows (PowerShell)
+netstat -ano | findstr ":3000"
 ```
 
 ### Base de Datos No Conecta
 
 ```bash
-# Verificar PostgreSQL
-docker exec seis_erp_postgres pg_isready
+# Verificar que postgres esté corriendo
+docker-compose -f docker-compose-app-imfra.yml ps postgres
 
-# Conectar manualmente
-docker exec -it seis_erp_postgres psql -U desarrollo -d core_erp
-
-# Ver logs
-docker logs seis_erp_postgres
+# Ver logs de postgres
+docker-compose -f docker-compose-app-imfra.yml logs postgres
 
 # Reiniciar
+docker-compose -f docker-compose-app-imfra.yml restart postgres
+```
+
+### Redis Desincronizado
+
+```bash
+# Limpiar cache de Redis
+docker-compose -f docker-compose-app-imfra.yml exec redis redis-cli FLUSHALL
+
+# Ver keys
+docker-compose -f docker-compose-app-imfra.yml exec redis redis-cli KEYS '*'
+```
+
+### Vault Sin Acceso
+
+```bash
+# Ver si está inicializado
+curl http://localhost:8200/v1/sys/health
+
+# Reiniciar y re-inicializar
+docker-compose -f docker-compose-app-imfra.yml restart vault
+bash scripts/init-vault.sh
+```
+
+### Limpiar Todo y Empezar de Nuevo
+
+```bash
+# Detener y remover contenedores
+docker-compose -f docker-compose-app-imfra.yml down -v
+docker-compose -f docker-compose-app-services.yml down -v
+docker-compose -f docker-compose-app-frontend.yml down -v
+
+# Remover volúmenes (cuidado: pérdida de datos)
+docker volume prune -f
+
+# Reiniciar
+make dev-infra-up
+```
+
+---
+
+## 📚 Referencias
+
+- **Arquitectura:** [MONOREPO_ARCHITECTURE.md](MONOREPO_ARCHITECTURE.md)
+- **Directrices de Desarrollo:** [.github/copilot-instructions.md](.github/copilot-instructions.md)
+- **Base de Datos:** [DB/db_seis_erp/README.md](DB/db_seis_erp/README.md)
+- **Backend ms-auth:** [BACKEND/ms-auth/README.md](BACKEND/ms-auth/README.md)
+- **Backend ms-core:** [BACKEND/ms-core/README.md](BACKEND/ms-core/README.md)
+- **Frontend:** [FRONTEND/README.md](FRONTEND/readme.md)
+
+---
+
+## 📝 Licencia
+
+Este proyecto es parte de SEIS App. Todos los derechos reservados.
 docker restart seis_erp_postgres
 ```
 
@@ -1007,138 +889,6 @@ docker-compose -f docker-compose-erp.yml up -d --build vault
 
 ---
 
-## 📚 Estructura del Proyecto
-
-```
-erp-system/
-├── BFF+AUTH/
-│   └── ms-auth/              # Servicio de autenticación
-│       ├── src/
-│       ├── Dockerfile
-│       └── package.json
-├── BUSSINES/
-│   └── ms-core/              # Servicio core del ERP
-│       ├── src/
-│       ├── Dockerfile
-│       └── package.json
-├── FRONTEND/
-│   └── app-login-erp-seis/   # Aplicación Angular
-│       ├── src/
-│       ├── Dockerfile
-│       └── package.json
-├── DB/
-│   └── db_seis_erp/
-│       └── init-db/          # Scripts de inicialización
-├── monitoring/
-│   ├── prometheus/
-│   │   └── prometheus.yml
-│   └── grafana/
-│       ├── provisioning/
-│       │   ├── datasources/
-│       │   └── dashboards/
-│       └── dashboards/
-├── vault/
-│   ├── config/
-│   └── policies/
-├── scripts/
-│   ├── deploy-full-stack.sh
-│   ├── init-vault.sh
-│   ├── backup-vault.sh
-│   ├── restore-vault.sh
-│   ├── verify-all.sh
-│   └── fix-grafana-complete.sh
-├── backups/
-│   ├── vault/
-│   └── database/
-├── docker-compose-erp.yml
-├── .env
-├── .gitignore
-├── Makefile
-└── README.md
-```
-
----
-
-## 📦 Estructura de Submódulos
-
-Este repositorio utiliza Git Submodules para gestionar los proyectos internos. Cada servicio tiene su propio repositorio:
-
-| Directorio | Repositorio | Descripción |
-|------------|-------------|-------------|
-| `BFF+AUTH/ms-auth` | [erp-ms-auth](https://github.com/tu-organizacion/erp-ms-auth) | Servicio de autenticación |
-| `BUSSINES/ms-core` | [erp-ms-core](https://github.com/tu-organizacion/erp-ms-core) | Servicio core del ERP |
-| `FRONTEND/app-login-erp-seis` | [erp-frontend](https://github.com/tu-organizacion/erp-frontend) | Aplicación Angular |
-| `DB/db_seis_erp` | [erp-database](https://github.com/tu-organizacion/erp-database) | Scripts de base de datos |
-
-### Clonar con Submódulos
-
-```bash
-# Clonar el repositorio principal con todos los submódulos
-git clone --recurse-submodules https://github.com/tu-organizacion/erp-system.git
-
-# O si ya clonaste el repo sin submódulos
-git submodule update --init --recursive
-```
-
-### Actualizar Submódulos
-
-```bash
-# Actualizar todos los submódulos a la última versión
-git submodule update --remote --merge
-
-# Actualizar un submódulo específico
-git submodule update --remote BFF+AUTH/ms-auth
-```
-
-### Trabajar con Submódulos
-
-```bash
-# Hacer cambios en un submódulo
-cd BFF+AUTH/ms-auth
-git checkout -b feature/nueva-funcionalidad
-# ... hacer cambios ...
-git add .
-git commit -m "Nueva funcionalidad"
-git push origin feature/nueva-funcionalidad
-
-# Volver al repo principal y actualizar la referencia
-cd ../..
-git add BFF+AUTH/ms-auth
-git commit -m "Actualizar referencia de ms-auth"
-git push
-```
-
-### Ver Estado de Submódulos
-
-```bash
-# Ver el estado de todos los submódulos
-git submodule status
-
-# Ver cambios en submódulos
-git submodule foreach git status
-
-# Ver diferencias
-git diff --submodule
-```
-
----
-
-## 🤝 Contribuir
-
-1. Fork el proyecto
-2. Crear feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add AmazingFeature'`)
-4. Push al branch (`git push origin feature/AmazingFeature`)
-5. Abrir Pull Request
-
----
-
-## 📄 Licencia
-
-Este proyecto está bajo licencia MIT.
-
----
-
 ## 👥 Equipo
 
 - **DevOps**: Configuración de infraestructura y monitoring
@@ -1155,23 +905,4 @@ Este proyecto está bajo licencia MIT.
 - 💬 Issues: [GitHub Issues](https://github.com/parraSebastian91/erp-system/issues)
 
 
----
-
-## 🎯 Roadmap
-
-- [ ] Agregar tests automatizados
-- [ ] Implementar CI/CD con GitHub Actions
-- [ ] Migrar a Kubernetes
-- [ ] Agregar más dashboards de Grafana
-- [ ] Implementar alertas con Alertmanager
-- [ ] Agregar Loki para logs centralizados
-- [ ] Implementar tracing con Jaeger
-- [ ] Agregar autenticación OAuth2
-
----
-
-**⭐ Si este proyecto te fue útil, dale una estrella en GitHub!**
-
----
-
-Made with ❤️ by [Tu Equipo]
+Made with ❤️ by Sebita
