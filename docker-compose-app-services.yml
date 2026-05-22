@@ -14,12 +14,6 @@ services:
       - "${AUTH_PORT:-3000}:3000"
     env_file:
       - ./BACKEND/ms-auth/.env.container
-    environment:
-      DB_HOST: postgres
-      REDIS_HOST: redis
-      NODE_ENV: development
-      VAULT_ADDR: http://vault:8200
-      VAULT_TOKEN: ${VAULT_TOKEN:-myroot}
     networks:
       - erp_network
     volumes:
@@ -163,6 +157,7 @@ services:
       - "prometheus.scrape=true"
       - "prometheus.port=3101"
       - "prometheus.path=/metrics"
+
 # =============================================================================
 # NETWORKS
 # =============================================================================
