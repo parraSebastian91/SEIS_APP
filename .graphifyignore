@@ -1,0 +1,76 @@
+# =============================================================================
+# .graphifyignore — SEIS App
+# Excluye archivos de bajo valor semántico del knowledge graph de graphify.
+# Formato: igual que .gitignore
+# =============================================================================
+
+# --- Dependencias y builds ---
+node_modules/
+dist/
+build/
+target/
+.m2/
+.gradle/
+coverage/
+.nyc_output/
+test-results/
+htmlcov/
+__pycache__/
+
+# --- Output de herramientas de análisis ---
+graphify-out/
+.graphify_*
+.codegraph/
+
+# --- Configuración de editor/IDE ---
+.vscode/
+.idea/
+.vs/
+
+# --- Configs TypeScript/Angular (estructura, no lógica) ---
+tsconfig*.json
+nest-cli.json
+jest-e2e.json
+angular.json
+ng-package.json
+
+# --- Configs de proxy y despliegue ---
+proxy.conf*.json
+firebase*.json
+nginx.conf
+
+# --- Lock files ---
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# --- Archivos generados/snapshots ---
+snapshot_*.json
+dependency-report.json
+codegraph.json
+
+# --- Scripts de Maven wrapper (binarios, no lógica) ---
+mvnw
+mvnw.cmd
+
+# --- Assets binarios ---
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Respaldos de secretos (no aportan arquitectura) ---
+vault/respaldo/
+
+# --- Monitoreo (dashboards JSON de Grafana) ---
+monitoring/
