@@ -94,6 +94,11 @@ Desde la raíz del workspace:
 ```powershell
 npx @colbymchenry/codegraph init -i
 ```
+o 
+```powershell
+npx @colbymchenry/codegraph index
+```
+para indexar nuevamente
 
 Esto genera la carpeta `.codegraph/` con `codegraph.json` indexado.
 

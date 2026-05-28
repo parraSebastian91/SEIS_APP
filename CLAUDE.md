@@ -1,8 +1,8 @@
 # CLAUDE.md — SEIS App (Proyecto Factor)
 > Co-arquitecto: Claude Sonnet 4.6
-> Última actualización: 2026-05-25 (graphify sync)
+> Última actualización: 2026-05-27 (graphify --update sync)
 > Tagline: "Conexión Financiera"
-> Knowledge graph: `graphify-out/graph.json` — 3,929 nodos · 5,126 edges · 469 comunidades
+> Knowledge graph: `graphify-out/graph.json` — 4,129 nodos · 5,440 edges · 490 comunidades
 
 ---
 
@@ -168,9 +168,9 @@ src/
 
 | Nodo | Edges | Módulo |
 |---|---|---|
-| `FacturaViewComponent` | 67 | seis-mfe-publicador-facturas |
-| `ModalPublicacionFacturaComponent` | 33 | seis-mfe-publicador-facturas |
-| `PublicadorFacturasComponent` | 33 | seis-mfe-publicador-facturas |
+| `FacturaViewComponent` | 70 | seis-mfe-publicador-facturas |
+| `PublicadorFacturasComponent` | 43 | seis-mfe-publicador-facturas |
+| `ModalPublicacionFacturaComponent` | 37 | seis-mfe-publicador-facturas |
 | `ItemJpaEntity` | 28 | ms-bodegaje (Java) |
 | `ItemModel` | 27 | ms-bodegaje (Java) |
 | `FacturaManagerUseCase` | — | ms-core (bridge BFF ↔ Invoice Domain) |
