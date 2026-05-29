@@ -46,3 +46,6 @@
 	path = BACKEND/bff_seis_app
 	url = https://github.com/parraSebastian91/bff_seis_app.git
 	branch = main
+[submodule "factor-landing"]
+	path = factor-landing
+	url = https://github.com/parraSebastian91/factor-landing.git
