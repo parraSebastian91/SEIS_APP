@@ -143,6 +143,13 @@ create_route "app-portal" "/portal" "portal-route"
 
 echo ""
 
+# Factor Landing
+create_service "factor-landing" "http://factor_landing:3000"
+create_route "factor-landing" "/home" "factor-landing-route"
+add_cors_plugin "factor-landing"
+
+echo ""
+
 # =============================================================================
 # MICROFRONTENDS (MFE)
 # =============================================================================
@@ -195,5 +202,6 @@ echo "  - Core API:       http://localhost:8000/api/core"
 echo "  - MFE Usuario:    http://localhost:8000/mfe-gestion-usuario"
 echo "  - MFE Dashboard:  http://localhost:8000/mfe-dashboard-facturas"
 echo "  - MFE Publicador: http://localhost:8000/mfe-publicador-facturas"
+echo "  - Factor Landing: http://localhost:8000/home"
 echo ""
 echo "🎉 ¡Listo para usar!"

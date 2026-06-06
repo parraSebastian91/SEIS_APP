@@ -61,6 +61,8 @@ FRONTEND/**/node_modules
 FRONTEND/**/dist
 FRONTEND/**/*.log
 FRONTEND/**/. angular
+FRONTEND/skills
+FRONTEND/skills-lock.json
 
 DB/**/*.log
 DB/**/pgdata
