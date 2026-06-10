@@ -1,6 +1,7 @@
 name: seis-frontend
 
 services:
+
   app-login:
     build:
       context: ./FRONTEND/app-login-erp-seis
@@ -48,7 +49,7 @@ services:
       start_period: 15s
     labels:
       - "prometheus.scrape=true"
-
+ 
   app-mfe-gestion-usuario:
     build:
       context: ./FRONTEND/seis-app-frontend
