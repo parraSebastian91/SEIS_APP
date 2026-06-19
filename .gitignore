@@ -31,6 +31,7 @@ build/
 # VAULT (CRÍTICO - NO COMMITEAR)
 # ==============================================================================
 .vault-tokens
+secrets-vault.json
 vault/data/*
 vault/logs/*
 !vault/data/.gitkeep

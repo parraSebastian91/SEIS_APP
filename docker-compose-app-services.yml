@@ -39,14 +39,6 @@ services:
     restart: unless-stopped
     env_file:
       - ./BACKEND/bff_seis_app/.env.container
-    environment:
-      DB_HOST: postgres
-      REDIS_HOST: redis
-      NODE_ENV: development
-      VAULT_ADDR: http://vault:8200
-      VAULT_TOKEN: ${VAULT_TOKEN:-myroot}
-      AUTH_SERVICE_URL: http://ms_auth_app:3000
-      CORE_SERVICE_URL: http://ms_core:3001
     ports:
       - "${PORT:-3002}:3002"
       # depends_on:
@@ -79,12 +71,6 @@ services:
     restart: unless-stopped
     env_file:
       - ./BACKEND/ms-core/.env.container
-    environment:
-      DB_HOST: postgres
-      REDIS_HOST: redis
-      NODE_ENV: development
-      VAULT_ADDR: http://vault:8200
-      VAULT_TOKEN: ${VAULT_TOKEN:-myroot}
     ports:
       - "${CORE_PORT:-3001}:3001"
     networks:

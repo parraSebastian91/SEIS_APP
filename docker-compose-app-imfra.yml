@@ -253,16 +253,16 @@ services:
     ports:
       - "${VAULT_PORT:-8200}:8200"
     environment:
-      VAULT_ADDR: http://0.0.0.0:8200
       VAULT_API_ADDR: http://0.0.0.0:8200
-      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN:-myroot}
+      VAULT_LOCAL_CONFIG: '{"ui":true,"listener":{"tcp":{"address":"0.0.0.0:8200","tls_disable":"1"}},"storage":{"file":{"path":"/vault/data"}},"api_addr":"http://0.0.0.0:8200","disable_mlock":true,"telemetry":{"prometheus_retention_time":"30s","disable_hostname":false},"log_level":"info"}'
+    user: "0"
     cap_add:
       - IPC_LOCK
     volumes:
       - vault_data:/vault/data
       - vault_logs:/vault/logs
-      #- ./vault/config:/vault/config:ro
-    command: server -dev -dev-listen-address=0.0.0.0:8200
+    command: >
+      sh -c "chmod 777 /vault/data && vault server"
     networks:
       - erp_network
     healthcheck:
