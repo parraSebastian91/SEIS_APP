@@ -1,4 +1,6 @@
 {
-  "DATABASE_PASSWORD": "desarrollo123",
-  "DATABASE_USER": "desarrollo"
+  "DATABASE_HOST": "ep-square-math-ap1oc51t-pooler.c-7.us-east-1.aws.neon.tech",
+  "DATABASE_PASSWORD": "npg_wl5QgrHimRh9",
+  "DATABASE_PORT": "5432",
+  "DATABASE_USER": "neondb_owner"
 }

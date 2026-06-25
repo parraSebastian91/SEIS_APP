@@ -36,6 +36,7 @@ vault/data/*
 vault/logs/*
 !vault/data/.gitkeep
 !vault/logs/.gitkeep
+vault/respaldo/*
 
 # ==============================================================================
 # PROYECTOS INTERNOS (Gestionados como submodules)

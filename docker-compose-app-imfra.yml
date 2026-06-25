@@ -254,19 +254,23 @@ services:
       - "${VAULT_PORT:-8200}:8200"
     environment:
       VAULT_API_ADDR: http://0.0.0.0:8200
-      VAULT_LOCAL_CONFIG: '{"ui":true,"listener":{"tcp":{"address":"0.0.0.0:8200","tls_disable":"1"}},"storage":{"file":{"path":"/vault/data"}},"api_addr":"http://0.0.0.0:8200","disable_mlock":true,"telemetry":{"prometheus_retention_time":"30s","disable_hostname":false},"log_level":"info"}'
+      VAULT_ADDR: http://0.0.0.0:8200
     user: "0"
     cap_add:
       - IPC_LOCK
     volumes:
       - vault_data:/vault/data
       - vault_logs:/vault/logs
+      - ./vault/config/vault.hcl:/vault/config/vault.hcl:ro
     command: >
-      sh -c "chmod 777 /vault/data && vault server"
+      sh -c "chmod 777 /vault/data && vault server -config=/vault/config/vault.hcl"
     networks:
       - erp_network
     healthcheck:
-      test: [ "CMD", "vault", "status" ]
+      # uninitcode=200 y sealedcode=200: responde 200 aunque esté sellado/no inicializado.
+      # Solo falla (unhealthy) si el proceso no está corriendo en absoluto.
+      test: [ "CMD", "wget", "--quiet", "--tries=1", "-O", "/dev/null",
+              "http://127.0.0.1:8200/v1/sys/health?uninitcode=200&sealedcode=200&standbyok=true" ]
       interval: 10s
       timeout: 5s
       retries: 3

@@ -29,3 +29,4 @@ docker-compose logs -f konga
 
 docker-compose -f docker-compose.yml build --no-cache auth-service   
 docker-compose -f docker-compose.yml up -d --force-recreate auth-service    
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH4edfRwmujLfX51WD9wj/tmN5FUv9E0Vg+78T/m5yHo
