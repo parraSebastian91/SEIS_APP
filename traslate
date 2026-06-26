@@ -1,0 +1,11 @@
+
+http://localhost:9000/seis-app-private-processed/public/documents/23bcc06d-67f9-4096-b58e-87242c5f82c9/DTE-factura-respaldo/factura%20icc-lg.webp?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260625%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260625T151908Z&X-Amz-Expires=300&X-Amz-SignedHeaders=host&X-Amz-Signature=488558ca23af81ab777535757e573bb740e1e79d79f5403719372dce47b73320
+<Error>
+<Code>NoSuchKey</Code>
+<Message>The specified key does not exist.</Message>
+<Key>public/documents/23bcc06d-67f9-4096-b58e-87242c5f82c9/DTE-factura-respaldo/factura icc-lg.webp</Key>
+<BucketName>seis-app-private-processed</BucketName>
+<Resource>/seis-app-private-processed/public/documents/23bcc06d-67f9-4096-b58e-87242c5f82c9/DTE-factura-respaldo/factura icc-lg.webp</Resource>
+<RequestId>18BC5C17290F7943</RequestId>
+<HostId>dd9025bab4ad464b049177c95eb6ebf374d3b3fd1af9251148b658df7ac2e3e8</HostId>
+</Error>

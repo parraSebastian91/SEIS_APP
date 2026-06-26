@@ -192,9 +192,9 @@ services:
       - erp_network
     ports:
       - "0.0.0.0:${KONG_PROXY_PORT:-8000}:8000"
-      - "0.0.0.0:${KONG_ADMIN_PORT:-8001}:8001"
+      - "127.0.0.1:${KONG_ADMIN_PORT:-8001}:8001"
       - "0.0.0.0:${KONG_PROXY_SSL_PORT:-8443}:8443"
-      - "0.0.0.0:${KONG_ADMIN_SSL_PORT:-8444}:8444"
+      - "127.0.0.1:${KONG_ADMIN_SSL_PORT:-8444}:8444"
     depends_on:
       kong-db:
         condition: service_healthy

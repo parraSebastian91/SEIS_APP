@@ -47,13 +47,15 @@ mc admin service restart mi-minio
 mc event add mi-minio/seis-app-public-original arn:minio:sqs::putEvent:webhook --event put
 mc event add mi-minio/seis-app-private-original arn:minio:sqs::putEvent:webhook --event put
 
-# RRRemoverr run evento de un bucket
+# Remover run evento de un bucket
 mc event rm mi-minio/seis-app-public-original arn:minio:sqs::putEvent:webhook --event put
 mc event rm mi-minio/seis-app-private-original arn:minio:sqs::putEvent:webhook --event put
 
 # crear publico un bucket
 mc anonymous set public mi-minio/seis-app-public-original
 mc anonymous set public mi-minio/seis-app-public-processed
+mc anonymous set public mi-minio/seis-app-private-original
+mc anonymous set public mi-minio/seis-app-private-processed
 
 ## buckets crerados
 
